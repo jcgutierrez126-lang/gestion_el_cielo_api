@@ -1,4 +1,4 @@
-from coronapi.settings import *  # noqa
+from cieloapi.settings import *  # noqa
 
 # Valores mínimos requeridos en CI (donde no hay .env)
 SECRET_KEY = 'django-insecure-test-only-key-not-for-production'

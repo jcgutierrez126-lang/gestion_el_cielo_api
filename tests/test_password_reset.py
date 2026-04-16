@@ -22,7 +22,7 @@ class TestPasswordResetRequest:
 
     def test_email_no_registrado_retorna_200(self):
         """No debe revelar si el email existe o no."""
-        response = self.client.post(self.url, {"email": "noexiste@corona.com.co"})
+        response = self.client.post(self.url, {"email": "noexiste@fincaelcielo.com"})
         assert response.status_code == status.HTTP_200_OK
 
     def test_email_registrado_con_correo_mockeado(self, usuario):

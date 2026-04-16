@@ -35,7 +35,7 @@ class TestPedidoUnificado:
             {
                 "numero_pedido": pedido.documento_compras,
                 "estado_pedido": "Entregado",
-                "observaciones_corona": "Entrega confirmada",
+                "observaciones_cielo": "Entrega confirmada",
             },
             format="json",
         )
@@ -98,12 +98,12 @@ class TestCorreosProcesados:
     def test_filtro_por_buzon(self, client_con_key, db):
         CorreoProcesado.objects.create(
             email_id="msg-001",
-            buzon="buzon1@corona.com.co",
+            buzon="buzon1@fincaelcielo.com",
             subject="Pedido 4501722041",
         )
         CorreoProcesado.objects.create(
             email_id="msg-002",
-            buzon="buzon2@corona.com.co",
+            buzon="buzon2@fincaelcielo.com",
             subject="Pedido 4501722042",
         )
         url = reverse("integraciones:correos-procesados") + "?buzon=buzon1"

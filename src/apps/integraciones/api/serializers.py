@@ -63,7 +63,7 @@ class PedidoSerializer(serializers.ModelSerializer):
             'motivo',
             'observaciones',
             'estado',
-            'observaciones_corona',
+            'observaciones_cielo',
             'fuente_supplos',
             'fuente_graph',
             'ultima_sincronizacion',
@@ -113,7 +113,7 @@ class PedidoListSerializer(serializers.ModelSerializer):
             'motivo',
             'observaciones',
             'estado',
-            'observaciones_corona',
+            'observaciones_cielo',
             'fuente_supplos',
             'fuente_graph',
             'created_at',
@@ -182,14 +182,14 @@ class LogConsultaSerializer(serializers.ModelSerializer):
 
 
 class ActualizarPedidoSerializer(serializers.ModelSerializer):
-    """Serializer para actualizar campos editables del pedido (observaciones Corona)."""
+    """Serializer para actualizar campos editables del pedido (observaciones Cielo)."""
 
     class Meta:
         model = Pedido
         fields = [
             'estado_pedido',
             'motivo',
-            'observaciones_corona',
+            'observaciones_cielo',
         ]
 
 

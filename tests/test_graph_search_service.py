@@ -156,7 +156,7 @@ class TestConstruirResultado:
         }
         datos = {
             "observaciones_proveedor": "Entregado",
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "posiciones_correo": [{"posicion": "10"}],
             "extraido_con_ia": True,
             "resumen_ia": "Resumen",
@@ -491,12 +491,12 @@ class TestHelpersBuzones:
     @pytest.mark.django_db
     def test_get_buzones_autorizados_retorna_activos(self, service, correo_autorizado):
         buzones = service._get_buzones_autorizados()
-        assert "buzon@corona.com.co" in buzones
+        assert "buzon@fincaelcielo.com" in buzones
 
     @pytest.mark.django_db
     def test_get_buzon_principal_retorna_principal(self, service, correo_autorizado):
         buzon = service._get_buzon_principal()
-        assert buzon == "buzon@corona.com.co"
+        assert buzon == "buzon@fincaelcielo.com"
 
     @pytest.mark.django_db
     def test_correo_ya_procesado_true(self, service):

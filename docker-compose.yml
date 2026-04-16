@@ -4,13 +4,13 @@ networks:
 
 services:
 
-  corona_integration_web:
+  cielo_api_web:
     build: .
-    image: corona_integration_web
-    container_name: corona_integration_web
+    image: cielo_api_web
+    container_name: cielo_api_web
 
     command: >
-      gunicorn coronapi.wsgi:application
+      gunicorn cieloapi.wsgi:application
       --bind 0.0.0.0:8000
       --workers=4
       --threads=4
@@ -37,6 +37,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
     networks:
       - internal
@@ -53,12 +55,12 @@ services:
       timeout: 5s
       retries: 3
 
-  corona_integration_worker:
-    image: corona_integration_web
-    container_name: corona_integration_worker
+  cielo_api_worker:
+    image: cielo_api_web
+    container_name: cielo_api_worker
 
     command: >
-      celery -A coronapi worker
+      celery -A cieloapi worker
       --loglevel=info
       --without-gossip
       --without-mingle
@@ -76,6 +78,7 @@ services:
 
     depends_on:
       - redis
+      - postgres
 
     networks:
       - internal
@@ -86,12 +89,12 @@ services:
     cap_drop:
       - ALL
 
-  corona_integration_beat:
-    image: corona_integration_web
-    container_name: corona_integration_beat
+  cielo_api_beat:
+    image: cielo_api_web
+    container_name: cielo_api_beat
 
     command: >
-      celery -A coronapi beat
+      celery -A cieloapi beat
       --loglevel=info
       --schedule=/tmp/celerybeat-schedule
 
@@ -107,6 +110,7 @@ services:
 
     depends_on:
       - redis
+      - postgres
 
     networks:
       - internal
@@ -117,9 +121,35 @@ services:
     cap_drop:
       - ALL
 
+  postgres:
+    image: postgres:15-alpine
+    container_name: cielo_api_postgres
+
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cielo_db}
+      POSTGRES_USER: ${DB_USER:-cielo_user}
+      POSTGRES_PASSWORD: ${DB_PASS:-cielo_pass}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    restart: always
+
+    mem_limit: 512m
+    mem_reservation: 256m
+
+    networks:
+      - internal
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cielo_user} -d ${DB_NAME:-cielo_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
-    container_name: corona_integration_redis
+    container_name: cielo_api_redis
 
     command: redis-server --save "" --appendonly no
 
@@ -136,3 +166,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+
+volumes:
+  postgres_data:

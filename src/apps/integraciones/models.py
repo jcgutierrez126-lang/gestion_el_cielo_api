@@ -196,10 +196,10 @@ class Pedido(models.Model):
         null=True,  # NOSONAR
         verbose_name="Estado Interno"
     )
-    observaciones_corona = models.TextField(
+    observaciones_cielo = models.TextField(
         blank=True,
         null=True,  # NOSONAR
-        verbose_name="Observaciones Corona"
+        verbose_name="Observaciones Cielo"
     )
 
     # Metadatos de sincronizacion

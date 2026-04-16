@@ -17,7 +17,7 @@ def limpiar_cache():
 def usuario(db):
     return User.objects.create_user(
         username="testuser",
-        email="test@corona.com.co",
+        email="test@fincaelcielo.com",
         first_name="Test",
         last_name="User",
         password="testpass123",
@@ -28,7 +28,7 @@ def usuario(db):
 def admin_user(db):
     user = User.objects.create_user(
         username="adminuser",
-        email="admin@corona.com.co",
+        email="admin@fincaelcielo.com",
         first_name="Admin",
         last_name="User",
         password="adminpass123",
@@ -83,7 +83,7 @@ def pedido(db):
 @pytest.fixture
 def correo_autorizado(db):
     return CorreoAutorizado.objects.create(
-        email="buzon@corona.com.co",
+        email="buzon@fincaelcielo.com",
         es_buzon_principal=True,
         activo=True,
     )

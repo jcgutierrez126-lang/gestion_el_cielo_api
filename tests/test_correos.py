@@ -15,11 +15,11 @@ class TestCorreoAutorizadoList:
     def test_crear_correo_retorna_201(self, client_con_key):
         response = client_con_key.post(
             reverse("integraciones:correos-list-create"),
-            {"email": "nuevo@corona.com.co", "es_buzon_principal": False, "activo": True},
+            {"email": "nuevo@fincaelcielo.com", "es_buzon_principal": False, "activo": True},
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
-        assert CorreoAutorizado.objects.filter(email="nuevo@corona.com.co").exists()
+        assert CorreoAutorizado.objects.filter(email="nuevo@fincaelcielo.com").exists()
 
     def test_crear_correo_email_invalido_retorna_400(self, client_con_key):
         response = client_con_key.post(
@@ -44,11 +44,11 @@ class TestBuzonPrincipal:
         """Al crear un segundo correo como principal, el primero debe dejar de serlo."""
         client_con_key.post(
             reverse("integraciones:correos-list-create"),
-            {"email": "segundo@corona.com.co", "es_buzon_principal": True, "activo": True},
+            {"email": "segundo@fincaelcielo.com", "es_buzon_principal": True, "activo": True},
             format="json",
         )
         assert CorreoAutorizado.objects.filter(es_buzon_principal=True).count() == 1
-        assert CorreoAutorizado.objects.get(es_buzon_principal=True).email == "segundo@corona.com.co"
+        assert CorreoAutorizado.objects.get(es_buzon_principal=True).email == "segundo@fincaelcielo.com"
 
 
 @pytest.mark.django_db
@@ -68,12 +68,12 @@ class TestCorreoAutorizadoDetail:
         url = reverse("integraciones:correos-detail", kwargs={"pk": correo_autorizado.pk})
         response = client_con_key.put(
             url,
-            {"email": "actualizado@corona.com.co", "es_buzon_principal": True, "activo": True},
+            {"email": "actualizado@fincaelcielo.com", "es_buzon_principal": True, "activo": True},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
         correo_autorizado.refresh_from_db()
-        assert correo_autorizado.email == "actualizado@corona.com.co"
+        assert correo_autorizado.email == "actualizado@fincaelcielo.com"
 
     def test_patch_correo(self, client_con_key, correo_autorizado):
         url = reverse("integraciones:correos-detail", kwargs={"pk": correo_autorizado.pk})

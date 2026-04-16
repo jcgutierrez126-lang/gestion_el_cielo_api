@@ -40,7 +40,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'coronapi.middleware.CorrelationIDMiddleware',
+    'cieloapi.middleware.CorrelationIDMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -81,7 +81,7 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
 }
 
-ROOT_URLCONF = 'coronapi.urls'
+ROOT_URLCONF = 'cieloapi.urls'
 
 TEMPLATES = [
     {
@@ -102,22 +102,16 @@ TEMPLATES = [
 ]
 
 
-WSGI_APPLICATION = 'coronapi.wsgi.application'
+WSGI_APPLICATION = 'cieloapi.wsgi.application'
 
-_sql_trusted = os.getenv("SQL_TRUSTED_CONNECTION", "False").lower() == "true"
 DATABASES = {
     "default": {
-        "ENGINE": "mssql",
-        "NAME": os.getenv("SQL_NAME"),
-        "USER": "" if _sql_trusted else os.getenv("SQL_USER"),
-        "PASSWORD": "" if _sql_trusted else os.getenv("SQL_PASS"),
-        "HOST": os.getenv("SQL_HOST"),
-        "PORT": os.getenv("SQL_PORT", "1433"),
-        "OPTIONS": {
-            "driver": "ODBC Driver 18 for SQL Server",
-            "extra_params": "TrustServerCertificate=yes"
-                            + (";Trusted_Connection=yes" if _sql_trusted else ""),
-        },
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "cielo_db"),
+        "USER": os.getenv("DB_USER", "cielo_user"),
+        "PASSWORD": os.getenv("DB_PASS", ""),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     },
 }
 
@@ -156,7 +150,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "https://localhost:3000,https://localhost:9002").split(",")
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://coronapi.lambdaanalytics.co",
+    "https://cieloapi.lambdaanalytics.co",
     "http://localhost:9002",
     "http://localhost:3000",
 ]
@@ -217,7 +211,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'json': {
-            '()': 'coronapi.logging_formatter.JSONFormatter',
+            '()': 'cieloapi.logging_formatter.JSONFormatter',
         },
     },
     'handlers': {

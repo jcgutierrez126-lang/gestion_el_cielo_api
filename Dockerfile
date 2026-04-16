@@ -8,13 +8,8 @@ ENV PYTHONPATH=/app/src
 # Directorio de trabajo
 WORKDIR /app
 
-# Instalar ODBC Driver 18 for SQL Server + dependencias
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl gnupg2 apt-transport-https gcc unixodbc-dev \
-    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
@@ -35,4 +30,4 @@ EXPOSE 8000
 COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "coronapi.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "cieloapi.wsgi:application", "--bind", "0.0.0.0:8000"]

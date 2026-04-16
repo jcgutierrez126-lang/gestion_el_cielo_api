@@ -5,7 +5,7 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-from coronapi.correo import get_access_token
+from cieloapi.correo import get_access_token
 import logging
 from apps.integraciones.services.ai_extraction_service import AIExtractionService
 from apps.integraciones.services.azure_document_service import AzureDocumentService
@@ -419,7 +419,7 @@ class GraphSearchService:
             "body_preview": correo_filtrado["body_preview"],
             "datos_extraidos": datos_extraidos,
             "observaciones_proveedor": datos_extraidos.get("observaciones_proveedor"),
-            "observaciones_corona": datos_extraidos.get("observaciones_corona"),
+            "observaciones_cielo": datos_extraidos.get("observaciones_cielo"),
             "posiciones_correo": datos_extraidos.get("posiciones_correo", []),
             "extraido_con_ia": datos_extraidos.get("extraido_con_ia", False),
             "resumen_ia": datos_extraidos.get("resumen_ia"),
@@ -429,7 +429,7 @@ class GraphSearchService:
         """Retorna respuesta vacia de extraccion (para correos ya procesados o sin IA)."""
         return {
             "observaciones_proveedor": None,
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "estado_mencionado": None,
             "fecha_entrega_mencionada": None,
             "motivo": None,

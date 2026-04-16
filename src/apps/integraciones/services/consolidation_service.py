@@ -240,8 +240,8 @@ class ConsolidationService:
         elif observaciones_graph.get("observaciones"):
             pedido_data["observaciones"] = observaciones_graph.get("observaciones")
 
-        if observaciones_graph.get("observaciones_corona"):
-            pedido_data["observaciones_corona"] = observaciones_graph.get("observaciones_corona")
+        if observaciones_graph.get("observaciones_cielo"):
+            pedido_data["observaciones_cielo"] = observaciones_graph.get("observaciones_cielo")
         pedido_data["fuente_graph"] = True
 
         return observaciones_graph
@@ -321,7 +321,7 @@ class ConsolidationService:
             "motivo": item.get("motivo", ""),
             "observaciones": item.get("observacion_proveedor", item.get("observaciones", "")),
             "estado": item.get("estado", ""),
-            "observaciones_corona": item.get("observacion_corona", item.get("observaciones_corona", "")),
+            "observaciones_cielo": item.get("observacion_corona", item.get("observaciones_cielo", "")),
             "fuente_supplos": True,
             "datos_raw_supplos": item,
         }
@@ -369,25 +369,25 @@ class ConsolidationService:
         )
 
         observacion_mas_reciente = None
-        observacion_corona_mas_reciente = None
+        observacion_cielo_mas_reciente = None
         email_info = None
         historial_correos = []
 
         for correo in correos_ordenados:
-            obs_proveedor, obs_corona = self._extraer_obs_correo(correo)
-            historial_correos.append(self._construir_entrada_historial(correo, obs_proveedor, obs_corona))
+            obs_proveedor, obs_cielo = self._extraer_obs_correo(correo)
+            historial_correos.append(self._construir_entrada_historial(correo, obs_proveedor, obs_cielo))
 
             if not observacion_mas_reciente and obs_proveedor:
                 observacion_mas_reciente = obs_proveedor
                 email_info = self._extraer_email_info(correo)
 
-            if not observacion_corona_mas_reciente and obs_corona:
-                observacion_corona_mas_reciente = obs_corona
+            if not observacion_cielo_mas_reciente and obs_cielo:
+                observacion_cielo_mas_reciente = obs_cielo
 
             if not observacion_mas_reciente:
                 observacion_mas_reciente, email_info = self._fallback_datos_extraidos(correo, email_info)
 
-        if not observacion_mas_reciente and not observacion_corona_mas_reciente and not historial_correos:
+        if not observacion_mas_reciente and not observacion_cielo_mas_reciente and not historial_correos:
             return None
 
         posiciones_correo = next(
@@ -401,7 +401,7 @@ class ConsolidationService:
 
         return {
             "observaciones": observacion_mas_reciente,
-            "observaciones_corona": observacion_corona_mas_reciente,
+            "observaciones_cielo": observacion_cielo_mas_reciente,
             "posiciones_correo": posiciones_correo,
             "historial_correos": historial_correos,
             "total_correos": len(historial_correos),
@@ -409,10 +409,10 @@ class ConsolidationService:
         }
 
     def _extraer_obs_correo(self, correo: Dict) -> tuple:
-        """Extrae observaciones_proveedor y observaciones_corona de un correo."""
-        return correo.get("observaciones_proveedor"), correo.get("observaciones_corona")
+        """Extrae observaciones_proveedor y observaciones_cielo de un correo."""
+        return correo.get("observaciones_proveedor"), correo.get("observaciones_cielo")
 
-    def _construir_entrada_historial(self, correo: Dict, obs_proveedor, obs_corona) -> Dict:
+    def _construir_entrada_historial(self, correo: Dict, obs_proveedor, obs_cielo) -> Dict:
         """Construye la entrada de historial para un correo."""
         return {
             "email_id": correo.get("email_id"),
@@ -420,7 +420,7 @@ class ConsolidationService:
             "from": correo.get("from"),
             "received_date": str(correo.get("received_date")) if correo.get("received_date") else None,
             "observaciones_proveedor": obs_proveedor,
-            "observaciones_corona": obs_corona,
+            "observaciones_cielo": obs_cielo,
             "posiciones": correo.get("posiciones_correo", [])
         }
 

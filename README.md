@@ -1,6 +1,6 @@
-# Corona Integration API
+# Finca el Cielo — API Backend
 
-Sistema de consolidacion de pedidos de compra para Corona. Integra multiples fuentes de datos — ERP (Supplos), correos corporativos (Microsoft Graph), procesamiento documental (Azure Document Intelligence) e inteligencia artificial (Azure OpenAI) — en una API REST unificada.
+Backend de la plataforma contable y administrativa de **Finca el Cielo**. Provee una API REST unificada que integra múltiples fuentes de datos para la gestión de pedidos de compra, trazabilidad de proveedores, procesamiento documental e inteligencia artificial.
 
 ## Arquitectura
 
@@ -8,9 +8,9 @@ Sistema de consolidacion de pedidos de compra para Corona. Integra multiples fue
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Clientes: Bot de Teams (Node.js / Python) · Integraciones       │
+│  Clientes: Aplicativo Web · Bots · Integraciones externas        │
 └────────────────────────────┬─────────────────────────────────────┘
-                             │ HTTPS + X-API-Key
+                             │ HTTPS + X-API-Key / JWT
 ┌────────────────────────────▼─────────────────────────────────────┐
 │  Servidor (Docker Compose)                                        │
 │  ┌─────────────────────┐  ┌──────────────┐  ┌──────────────┐    │
@@ -68,10 +68,10 @@ Los endpoints de pedidos (`/api/v1/pedidos/`) requieren exclusivamente **API Key
 ### Generar una API Key
 
 ```bash
-docker exec corona_integration_web python manage.py crear_api_key "nombre-cliente"
+docker exec cielo_api_web python manage.py crear_api_key "nombre-cliente"
 ```
 
-Se puede tener multiples keys (una por cliente/bot).
+Se pueden tener multiples keys (una por cliente/bot).
 
 ---
 
@@ -184,10 +184,10 @@ X-API-Key: <key>
 # Django
 SECRET_KEY=your-secret-key
 DEBUG=False
-ALLOWED_HOSTS=coronapi.lambdaanalytics.co,localhost
+ALLOWED_HOSTS=cieloapi.lambdaanalytics.co,localhost
 
 # SQL Server
-SQL_NAME=coronapi_db
+SQL_NAME=cielo_db
 SQL_USER=sa
 SQL_PASS=password
 SQL_HOST=ip-servidor-sql
@@ -197,19 +197,19 @@ SQL_PORT=1433
 CORREO_CLIENT_ID=your-app-id
 CORREO_TENANT_ID=your-tenant-id
 CORREO_SECRET_KEY=your-client-secret
-EMAIL_HOST_USER=correo@corona.com.co
+EMAIL_HOST_USER=correo@fincaelcielo.com
 
 # Supplos API (ERP)
-SUPLOS_API_URL=https://apicoronaqas.suplos.com
+SUPLOS_API_URL=https://api.suplos.com
 SUPLOS_API_EMAIL=your-email
 SUPLOS_API_PASSWORD=your-password
 
 # Azure OpenAI
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_STRUCTURING_DEPLOYMENT=gpt-4.1-structuring-suplos
+AZURE_OPENAI_STRUCTURING_DEPLOYMENT=gpt-4.1-structuring
 AZURE_OPENAI_STRUCTURING_API_VERSION=2025-01-01-preview
-AZURE_OPENAI_ORCHESTRATOR_DEPLOYMENT=gpt-5.2-chat-orchestrator-suplos
+AZURE_OPENAI_ORCHESTRATOR_DEPLOYMENT=gpt-5.2-chat-orchestrator
 AZURE_OPENAI_ORCHESTRATOR_API_VERSION=2025-04-01-preview
 
 # Azure Document Intelligence (OCR PDFs/imagenes)
@@ -221,14 +221,14 @@ CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 # CORS
-CORS_ALLOWED_ORIGINS=https://coronapi.lambdaanalytics.co,http://localhost:3000
+CORS_ALLOWED_ORIGINS=https://cieloapi.lambdaanalytics.co,http://localhost:3000
 ```
 
 ---
 
 ## Deployment
 
-### Produccion (server-216)
+### Produccion
 
 El CI/CD usa GitHub Actions con dos jobs:
 
@@ -241,35 +241,35 @@ El CI/CD usa GitHub Actions con dos jobs:
 |--------|-------------|
 | `DOCKER_USERNAME` | Usuario de Docker Hub |
 | `DOCKER_PASSWORD` | Password de Docker Hub |
-| `SERVER_HOST` | IP del servidor (216.158.229.228) |
-| `SERVER_USER` | Usuario SSH (`deploy`) |
+| `SERVER_HOST` | IP del servidor |
+| `SERVER_USER` | Usuario SSH |
 | `SERVER_SSH_KEY` | Llave privada SSH |
-| `SERVER_PORT` | Puerto SSH (2244) |
+| `SERVER_PORT` | Puerto SSH |
 
 ### Docker Compose
 
 ```bash
 # Primera vez
-git clone https://github.com/LambdaAnalyticsSAS/corona_integration.git
-cd corona_integration
+git clone https://github.com/LambdaAnalyticsSAS/gestion_el_cielo_api.git
+cd gestion_el_cielo_api
 cp .env.example .env   # completar variables
 docker compose up -d --build
-docker exec corona_integration_web python manage.py migrate
-docker exec corona_integration_web python manage.py crear_api_key "bot-teams"
+docker exec cielo_api_web python manage.py migrate
+docker exec cielo_api_web python manage.py crear_api_key "cliente-principal"
 
 # Actualizacion
 git pull
 docker compose up -d --build
-docker exec corona_integration_web python manage.py migrate
+docker exec cielo_api_web python manage.py migrate
 ```
 
 Servicios:
 | Contenedor | Descripcion | Puerto |
 |------------|-------------|--------|
-| `corona_integration_web` | API (Gunicorn) | 8001:8000 |
-| `corona_integration_worker` | Celery worker (tareas async) | — |
-| `corona_integration_beat` | Celery scheduler | — |
-| `corona_integration_redis` | Broker + backend resultados | interno |
+| `cielo_api_web` | API (Gunicorn) | 8001:8000 |
+| `cielo_api_worker` | Celery worker (tareas async) | — |
+| `cielo_api_beat` | Celery scheduler | — |
+| `cielo_api_redis` | Broker + backend resultados | interno |
 
 ### Migraciones (primera vez con SQL Server)
 
@@ -283,7 +283,7 @@ git commit -m "feat: initial migrations for SQL Server"
 git push
 
 # Servidor — aplicar
-docker exec corona_integration_web python manage.py migrate
+docker exec cielo_api_web python manage.py migrate
 ```
 
 ---
@@ -291,7 +291,7 @@ docker exec corona_integration_web python manage.py migrate
 ## Estructura del Proyecto
 
 ```
-corona_integration/
+gestion_el_cielo_api/
 ├── src/
 │   ├── apps/
 │   │   ├── integraciones/
@@ -320,13 +320,13 @@ corona_integration/
 │   ├── test_auth.py                     # Tests de autenticacion y API Key
 │   ├── test_pedidos.py                  # Tests de endpoints de pedidos
 │   └── test_usuarios.py                 # Tests de login y refresh token
-├── docs/
-│   └── azure-deploy-diagram.svg
 ├── docker-compose.yml                   # Web + Worker + Beat + Redis
 ├── Dockerfile                           # Python 3.13-slim + ODBC Driver 18
 ├── requirements.txt
 ├── pytest.ini
-└── .github/workflows/deploy.yml         # CI/CD: test → build → deploy SSH
+└── .ordo/
+    ├── ci.yml                           # CI: tests automatizados
+    └── cd.yml                           # CD: build y deploy SSH
 ```
 
 ---

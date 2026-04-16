@@ -20,8 +20,8 @@ from apps.usuarios.models import User
 factory = APIRequestFactory()
 
 DATOS_USUARIO_NUEVO = {
-    "username": "nuevo@corona.com.co",
-    "email": "nuevo@corona.com.co",
+    "username": "nuevo@fincaelcielo.com",
+    "email": "nuevo@fincaelcielo.com",
     "first_name": "Nuevo",
     "last_name": "Usuario",
     "phone": "3001234567",

@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
-from coronapi.filtering import filter_by_search
+from cieloapi.filtering import filter_by_search
 from apps.usuarios.models import User
 from apps.usuarios.api.serializers import UserSerializer, GroupSerializer, UserLoginSerializer
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
@@ -16,7 +16,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.conf import settings
 from django.core.cache import cache
-from coronapi.correo import enviar_correo_simple, get_access_token, enviar_correo_masivo
+from cieloapi.correo import enviar_correo_simple, get_access_token, enviar_correo_masivo
 import secrets
 import string
 from datetime import datetime

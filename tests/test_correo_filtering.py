@@ -1,23 +1,23 @@
 """
-Tests para coronapi/filtering.py y coronapi/correo.py
+Tests para cieloapi/filtering.py y cieloapi/correo.py
 """
 import pytest
 from unittest.mock import patch, MagicMock
 
 
 # ---------------------------------------------------------------------------
-# coronapi/filtering.py
+# cieloapi/filtering.py
 # ---------------------------------------------------------------------------
 
 class TestFilterBySearch:
 
     def test_retorna_todo_sin_query(self):
-        from coronapi.filtering import filter_by_search
+        from cieloapi.filtering import filter_by_search
         items = [MagicMock(full_name="Juan"), MagicMock(full_name="Pedro")]
         assert filter_by_search(items, "", ["full_name"]) == items
 
     def test_filtra_por_campo_de_objeto(self):
-        from coronapi.filtering import filter_by_search
+        from cieloapi.filtering import filter_by_search
 
         class Obj:
             def __init__(self, name):
@@ -28,7 +28,7 @@ class TestFilterBySearch:
         assert len(resultado) == 2
 
     def test_busqueda_case_insensitive(self):
-        from coronapi.filtering import filter_by_search
+        from cieloapi.filtering import filter_by_search
 
         class Obj:
             def __init__(self, name):
@@ -39,7 +39,7 @@ class TestFilterBySearch:
         assert len(resultado) == 1
 
     def test_sin_resultados(self):
-        from coronapi.filtering import filter_by_search
+        from cieloapi.filtering import filter_by_search
 
         class Obj:
             def __init__(self, name):
@@ -52,19 +52,19 @@ class TestFilterBySearch:
 class TestFilterBySearchStudents:
 
     def test_retorna_todo_sin_query(self):
-        from coronapi.filtering import filter_by_search_students
+        from cieloapi.filtering import filter_by_search_students
         data = [{"nombre": "Juan"}, {"nombre": "Maria"}]
         assert filter_by_search_students(data, "", ["nombre"]) == data
 
     def test_filtra_dicts_por_campo(self):
-        from coronapi.filtering import filter_by_search_students
+        from cieloapi.filtering import filter_by_search_students
         data = [{"nombre": "Juan Perez"}, {"nombre": "Pedro Lopez"}]
         resultado = filter_by_search_students(data, "juan", ["nombre"])
         assert len(resultado) == 1
         assert resultado[0]["nombre"] == "Juan Perez"
 
     def test_campo_inexistente_no_rompe(self):
-        from coronapi.filtering import filter_by_search_students
+        from cieloapi.filtering import filter_by_search_students
         data = [{"otro": "valor"}]
         resultado = filter_by_search_students(data, "valor", ["nombre"])
         assert resultado == []
@@ -73,33 +73,33 @@ class TestFilterBySearchStudents:
 class TestGetStatusFilter:
 
     def test_retorna_true_por_defecto(self):
-        from coronapi.filtering import get_status_filter
+        from cieloapi.filtering import get_status_filter
         request = MagicMock()
         request.query_params.get.return_value = "false"
         assert get_status_filter(request) is True
 
     def test_retorna_none_con_show_inactive_true(self):
-        from coronapi.filtering import get_status_filter
+        from cieloapi.filtering import get_status_filter
         request = MagicMock()
         request.query_params.get.return_value = "true"
         assert get_status_filter(request) is None
 
     def test_case_insensitive_show_inactive(self):
-        from coronapi.filtering import get_status_filter
+        from cieloapi.filtering import get_status_filter
         request = MagicMock()
         request.query_params.get.return_value = "True"
         assert get_status_filter(request) is None
 
 
 # ---------------------------------------------------------------------------
-# coronapi/correo.py
+# cieloapi/correo.py
 # ---------------------------------------------------------------------------
 
 class TestGetAccessToken:
 
-    @patch("coronapi.correo.ConfidentialClientApplication")
+    @patch("cieloapi.correo.ConfidentialClientApplication")
     def test_retorna_ok_con_token(self, mock_app_cls):
-        from coronapi.correo import get_access_token
+        from cieloapi.correo import get_access_token
 
         mock_app = MagicMock()
         mock_app.acquire_token_for_client.return_value = {"access_token": "tok-abc"}
@@ -115,9 +115,9 @@ class TestGetAccessToken:
         assert resultado["status"] == "OK"
         assert resultado["access"] == "tok-abc"
 
-    @patch("coronapi.correo.ConfidentialClientApplication")
+    @patch("cieloapi.correo.ConfidentialClientApplication")
     def test_retorna_error_sin_access_token(self, mock_app_cls):
-        from coronapi.correo import get_access_token
+        from cieloapi.correo import get_access_token
 
         mock_app = MagicMock()
         mock_app.acquire_token_for_client.return_value = {
@@ -134,9 +134,9 @@ class TestGetAccessToken:
 
         assert resultado["status"] == "ERROR"
 
-    @patch("coronapi.correo.ConfidentialClientApplication")
+    @patch("cieloapi.correo.ConfidentialClientApplication")
     def test_retorna_error_si_falla_construccion_app(self, mock_app_cls):
-        from coronapi.correo import get_access_token
+        from cieloapi.correo import get_access_token
 
         mock_app_cls.side_effect = Exception("Error de MSAL")
 
@@ -149,9 +149,9 @@ class TestGetAccessToken:
 
         assert resultado["status"] == "ERROR"
 
-    @patch("coronapi.correo.ConfidentialClientApplication")
+    @patch("cieloapi.correo.ConfidentialClientApplication")
     def test_retorna_error_si_falla_acquire_token(self, mock_app_cls):
-        from coronapi.correo import get_access_token
+        from cieloapi.correo import get_access_token
 
         mock_app = MagicMock()
         mock_app.acquire_token_for_client.side_effect = Exception("Network error")
@@ -169,10 +169,10 @@ class TestGetAccessToken:
 
 class TestEnviarCorreoMasivo:
 
-    @patch("coronapi.correo.requests.post")
-    @patch("coronapi.correo.get_template")
+    @patch("cieloapi.correo.requests.post")
+    @patch("cieloapi.correo.get_template")
     def test_envia_exitosamente(self, mock_tpl, mock_post):
-        from coronapi.correo import enviar_correo_masivo
+        from cieloapi.correo import enviar_correo_masivo
 
         mock_tpl.return_value.render.return_value = "<html>correo</html>"
         mock_resp = MagicMock()
@@ -188,10 +188,10 @@ class TestEnviarCorreoMasivo:
         )
         assert resultado["status"] == "OK"
 
-    @patch("coronapi.correo.requests.post")
-    @patch("coronapi.correo.get_template")
+    @patch("cieloapi.correo.requests.post")
+    @patch("cieloapi.correo.get_template")
     def test_retorna_error_en_fallo_http(self, mock_tpl, mock_post):
-        from coronapi.correo import enviar_correo_masivo
+        from cieloapi.correo import enviar_correo_masivo
 
         mock_tpl.return_value.render.return_value = "<html>correo</html>"
         mock_resp = MagicMock()
@@ -208,10 +208,10 @@ class TestEnviarCorreoMasivo:
         )
         assert resultado["status"] == "ERROR"
 
-    @patch("coronapi.correo.requests.post")
-    @patch("coronapi.correo.get_template")
+    @patch("cieloapi.correo.requests.post")
+    @patch("cieloapi.correo.get_template")
     def test_retorna_error_en_excepcion(self, mock_tpl, mock_post):
-        from coronapi.correo import enviar_correo_masivo
+        from cieloapi.correo import enviar_correo_masivo
 
         mock_tpl.side_effect = Exception("Template no encontrado")
 
@@ -227,10 +227,10 @@ class TestEnviarCorreoMasivo:
 
 class TestEnviarCorreoSimple:
 
-    @patch("coronapi.correo.requests.post")
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.requests.post")
+    @patch("cieloapi.correo.get_access_token")
     def test_envia_exitosamente(self, mock_token, mock_post):
-        from coronapi.correo import enviar_correo_simple
+        from cieloapi.correo import enviar_correo_simple
 
         mock_token.return_value = {"status": "OK", "access": "tok"}
         mock_resp = MagicMock()
@@ -240,19 +240,19 @@ class TestEnviarCorreoSimple:
         resultado = enviar_correo_simple("Asunto", "<p>Hola</p>", ["dest@test.com"])
         assert resultado["status"] == "OK"
 
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.get_access_token")
     def test_retorna_error_si_token_falla(self, mock_token):
-        from coronapi.correo import enviar_correo_simple
+        from cieloapi.correo import enviar_correo_simple
 
         mock_token.return_value = {"status": "ERROR", "message": "Sin config"}
 
         resultado = enviar_correo_simple("Asunto", "<p>Hola</p>", ["dest@test.com"])
         assert resultado["status"] == "ERROR"
 
-    @patch("coronapi.correo.requests.post")
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.requests.post")
+    @patch("cieloapi.correo.get_access_token")
     def test_retorna_error_en_fallo_http(self, mock_token, mock_post):
-        from coronapi.correo import enviar_correo_simple
+        from cieloapi.correo import enviar_correo_simple
 
         mock_token.return_value = {"status": "OK", "access": "tok"}
         mock_resp = MagicMock()
@@ -263,10 +263,10 @@ class TestEnviarCorreoSimple:
         resultado = enviar_correo_simple("Asunto", "<p>Hola</p>", ["dest@test.com"])
         assert resultado["status"] == "ERROR"
 
-    @patch("coronapi.correo.requests.post")
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.requests.post")
+    @patch("cieloapi.correo.get_access_token")
     def test_retorna_error_en_excepcion(self, mock_token, mock_post):
-        from coronapi.correo import enviar_correo_simple
+        from cieloapi.correo import enviar_correo_simple
 
         mock_token.return_value = {"status": "OK", "access": "tok"}
         mock_post.side_effect = Exception("Timeout")
@@ -277,10 +277,10 @@ class TestEnviarCorreoSimple:
 
 class TestEnviarCorreoConPlantilla:
 
-    @patch("coronapi.correo.enviar_correo_masivo")
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.enviar_correo_masivo")
+    @patch("cieloapi.correo.get_access_token")
     def test_delega_a_enviar_masivo(self, mock_token, mock_masivo):
-        from coronapi.correo import enviar_correo_con_plantilla
+        from cieloapi.correo import enviar_correo_con_plantilla
 
         mock_token.return_value = {"status": "OK", "access": "tok"}
         mock_masivo.return_value = {"status": "OK", "message": "Enviado"}
@@ -294,9 +294,9 @@ class TestEnviarCorreoConPlantilla:
         assert resultado["status"] == "OK"
         mock_masivo.assert_called_once()
 
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.get_access_token")
     def test_retorna_error_si_token_falla(self, mock_token):
-        from coronapi.correo import enviar_correo_con_plantilla
+        from cieloapi.correo import enviar_correo_con_plantilla
 
         mock_token.return_value = {"status": "ERROR", "message": "Sin credenciales"}
 
@@ -308,9 +308,9 @@ class TestEnviarCorreoConPlantilla:
         )
         assert resultado["status"] == "ERROR"
 
-    @patch("coronapi.correo.get_access_token")
+    @patch("cieloapi.correo.get_access_token")
     def test_retorna_error_en_excepcion(self, mock_token):
-        from coronapi.correo import enviar_correo_con_plantilla
+        from cieloapi.correo import enviar_correo_con_plantilla
 
         mock_token.side_effect = Exception("Error inesperado")
 

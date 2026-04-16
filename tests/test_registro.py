@@ -9,7 +9,7 @@ from apps.usuarios.models import User
 REGISTRO_URL = "usuarios:register"
 
 DATOS_VALIDOS = {
-    "email": "nuevo@corona.com.co",
+    "email": "nuevo@fincaelcielo.com",
     "password": "Segura123!",
     "first_name": "Nuevo",
     "last_name": "Usuario",
@@ -65,7 +65,7 @@ class TestRegistroUsuario:
     @patch(MOCK_PATH, return_value={"status": "OK"})
     def test_identificacion_duplicada_retorna_400(self, _mock):
         self.client.post(self.url, DATOS_VALIDOS, format="json")
-        datos_dup = {**DATOS_VALIDOS, "email": "otro@corona.com.co"}
+        datos_dup = {**DATOS_VALIDOS, "email": "otro@fincaelcielo.com"}
         response = self.client.post(self.url, datos_dup, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 

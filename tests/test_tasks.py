@@ -106,7 +106,7 @@ class TestLimpiarRegistrosAntiguos:
 
         correo = CorreoProcesado.objects.create(
             email_id="viejo-001",
-            buzon="buzon@corona.com.co",
+            buzon="buzon@fincaelcielo.com",
             subject="Pedido viejo",
         )
         CorreoProcesado.objects.filter(pk=correo.pk).update(procesado_at=hace_100_dias)
@@ -122,7 +122,7 @@ class TestLimpiarRegistrosAntiguos:
 
         CorreoProcesado.objects.create(
             email_id="reciente-001",
-            buzon="buzon@corona.com.co",
+            buzon="buzon@fincaelcielo.com",
             subject="Pedido reciente",
         )
 

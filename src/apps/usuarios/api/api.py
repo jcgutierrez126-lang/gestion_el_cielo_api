@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
-from coronapi.filtering import filter_by_search
+from cieloapi.filtering import filter_by_search
 from apps.usuarios.models import User
 from apps.usuarios.api.serializers import UserSerializer, GroupSerializer
 from rest_framework.permissions import IsAuthenticated

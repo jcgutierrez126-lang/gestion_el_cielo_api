@@ -150,7 +150,7 @@ class TestBuscarEnBuzon:
         }]
         datos_ia = {
             "observaciones_proveedor": "En camino",
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "posiciones_correo": [],
             "extraido_con_ia": True,
             "resumen_ia": None,
@@ -264,7 +264,7 @@ class TestFase3ExtraccionIA:
         ]
         datos_ia = {
             "observaciones_proveedor": "Despacho lunes",
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "posiciones_correo": [],
             "extraido_con_ia": True,
             "resumen_ia": None,

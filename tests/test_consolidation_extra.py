@@ -82,7 +82,7 @@ class TestEnriquecerConGraph:
                 "from": "a@b.com",
                 "received_date": "2025-04-15",
                 "observaciones_proveedor": "obs posicion",
-                "observaciones_corona": None,
+                "observaciones_cielo": None,
                 "posiciones_correo": [{"posicion": "10", "comentario": "OK entregado"}],
             }]
         }
@@ -99,7 +99,7 @@ class TestEnriquecerConGraph:
                 "from": "a@b.com",
                 "received_date": "2025-04-15",
                 "observaciones_proveedor": "Entrega semana que viene",
-                "observaciones_corona": None,
+                "observaciones_cielo": None,
                 "posiciones_correo": [],
             }]
         }
@@ -107,7 +107,7 @@ class TestEnriquecerConGraph:
         service._enriquecer_con_graph(pedido_data, graph_data, None)
         assert pedido_data.get("observaciones") == "Entrega semana que viene"
 
-    def test_enriquece_observaciones_corona(self, service):
+    def test_enriquece_observaciones_cielo(self, service):
         graph_data = {
             "status": "OK",
             "data": [{
@@ -116,13 +116,13 @@ class TestEnriquecerConGraph:
                 "from": "a@b.com",
                 "received_date": "2025-04-15",
                 "observaciones_proveedor": "obs",
-                "observaciones_corona": "Verificado por corona",
+                "observaciones_cielo": "Verificado por corona",
                 "posiciones_correo": [],
             }]
         }
         pedido_data = {}
         service._enriquecer_con_graph(pedido_data, graph_data, None)
-        assert pedido_data.get("observaciones_corona") == "Verificado por corona"
+        assert pedido_data.get("observaciones_cielo") == "Verificado por corona"
         assert pedido_data.get("fuente_graph") is True
 
 
@@ -142,7 +142,7 @@ class TestProcesarSoloGraph:
                 "from": "a@b.com",
                 "received_date": "2025-04-15",
                 "observaciones_proveedor": "Sin entrega aún",
-                "observaciones_corona": None,
+                "observaciones_cielo": None,
                 "posiciones_correo": [],
             }]
         }
@@ -163,7 +163,7 @@ class TestProcesarSoloGraph:
                 "from": "a@b.com",
                 "received_date": "2025-04-15",
                 "observaciones_proveedor": None,
-                "observaciones_corona": None,
+                "observaciones_cielo": None,
                 "posiciones_correo": [],
             }]
         }

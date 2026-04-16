@@ -12,7 +12,7 @@ class JSONFormatter(logging.Formatter):
     {
         "timestamp": "2026-03-18T21:00:00.000Z",
         "level": "INFO",
-        "service": "corona-integration",
+        "service": "cielo-api",
         "module": "graph_search_service",
         "correlation_id": "abc-123",
         "message": "...",
@@ -20,10 +20,10 @@ class JSONFormatter(logging.Formatter):
     }
     """
 
-    SERVICE_NAME = "corona-integration"
+    SERVICE_NAME = "cielo-api"
 
     def format(self, record: logging.LogRecord) -> str:
-        from coronapi.middleware import get_correlation_id
+        from cieloapi.middleware import get_correlation_id
 
         log_entry = {
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",

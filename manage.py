@@ -8,7 +8,7 @@ from pathlib import Path
 def main():
     """Run administrative tasks."""
     sys.path.insert(0, str(Path(__file__).resolve().parent / 'src'))
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'coronapi.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cieloapi.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

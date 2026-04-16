@@ -7,18 +7,18 @@ from rest_framework.response import Response
 
 class APIRootView(APIView):
     """
-    API Root - Corona Integration
+    API Root - Finca el Cielo
     """
     permission_classes = []
 
     def get(self, request):
         return Response({
-            "api": "Corona Integration API",
+            "api": "Finca el Cielo API",
             "version": "1.0",
             "endpoints": {
                 "users": "/api/v1/users/",
                 "pedidos": "/api/v1/pedidos/",
-                "docs": "https://coronapi.lambdaanalytics.co/docs/",
+                "docs": "https://cieloapi.lambdaanalytics.co/docs/",
             },
             "status": "operational"
         })

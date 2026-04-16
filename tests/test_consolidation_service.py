@@ -182,7 +182,7 @@ class TestExtraerObservacionesGraph:
                 "from": "proveedor@test.com",
                 "received_date": "2025-04-15T10:00:00",
                 "observaciones_proveedor": "Entregado hoy",
-                "observaciones_corona": None,
+                "observaciones_cielo": None,
                 "posiciones_correo": [],
             },
             {
@@ -191,7 +191,7 @@ class TestExtraerObservacionesGraph:
                 "from": "proveedor@test.com",
                 "received_date": "2025-04-10T10:00:00",
                 "observaciones_proveedor": "Despacho semana que viene",
-                "observaciones_corona": None,
+                "observaciones_cielo": None,
                 "posiciones_correo": [],
             },
         ]
@@ -207,7 +207,7 @@ class TestExtraerObservacionesGraph:
             "from": "x@y.com",
             "received_date": "2025-04-01",
             "observaciones_proveedor": None,
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "posiciones_correo": [],
             "datos_extraidos": {"observaciones_proveedor": "Desde fallback"},
         }]
@@ -222,7 +222,7 @@ class TestExtraerObservacionesGraph:
             "from": "x@y.com",
             "received_date": "2025-04-01",
             "observaciones_proveedor": "obs",
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "posiciones_correo": posiciones,
         }]
         resultado = service._extraer_observaciones_graph(correos)

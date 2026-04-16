@@ -23,7 +23,7 @@ class APIKeyAuthentication(BaseAuthentication):
     Compatible con JWT — DRF prueba ambos en orden.
 
     Uso en el bot (Node.js):
-        headers: { 'X-API-Key': process.env.CORONA_API_KEY }
+        headers: { 'X-API-Key': process.env.CIELO_API_KEY }
     """
 
     def authenticate(self, request):

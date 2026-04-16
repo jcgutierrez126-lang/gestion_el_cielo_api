@@ -98,7 +98,7 @@ class AIExtractionService:
     def _get_system_prompt(self) -> str:
         """Retorna el prompt del sistema para la extraccion."""
         return """Eres un asistente especializado en extraer informacion de correos
-relacionados con pedidos de compra entre proveedores y Corona (empresa colombiana).
+relacionados con pedidos de compra entre proveedores y Finca el Cielo.
 
 CONTEXTO: Los correos de seguimiento a pedidos pueden tener dos formatos:
 
@@ -134,7 +134,7 @@ los comentarios de las filas que corresponden al numero de pedido indicado.
 Responde SIEMPRE en formato JSON con esta estructura:
 {
     "observaciones_proveedor": "Pos 30: Se entrego hoy | Pos 40: Se programa entrega en la fecha indicada",
-    "observaciones_corona": "texto de observaciones corona si existe, o null",
+    "observaciones_cielo": "texto de observaciones de Finca el Cielo si existe, o null",
     "estado_mencionado": "estado del pedido si se menciona o null",
     "fecha_entrega_mencionada": "fecha si se menciona en formato YYYY-MM-DD o null",
     "motivo": "motivo o razon si se menciona o null",
@@ -166,7 +166,7 @@ INSTRUCCIONES:
 - Si el correo tiene una tabla, busca las filas donde "Documento compras" contiene "{numero_pedido}"
 - Para cada fila encontrada, extrae el numero de posicion ("Pos.") y el comentario de "Comentarios"
 - Si el correo tiene texto en parrafos, extrae las observaciones relevantes al pedido {numero_pedido}
-- Si hay "Observaciones Corona:" en el texto, extrae esa informacion por separado en observaciones_corona
+- Si hay "Observaciones Cielo:" en el texto, extrae esa informacion por separado en observaciones_cielo
 
 CONTENIDO DEL CORREO:
 {contenido}
@@ -214,7 +214,7 @@ Recuerda responder SOLO en formato JSON."""
         """Normaliza la respuesta de GPT al formato esperado."""
         return {
             "observaciones_proveedor": datos.get("observaciones_proveedor"),
-            "observaciones_corona": datos.get("observaciones_corona"),
+            "observaciones_cielo": datos.get("observaciones_cielo"),
             "estado_mencionado": datos.get("estado_mencionado"),
             "fecha_entrega_mencionada": datos.get("fecha_entrega_mencionada"),
             "motivo": datos.get("motivo"),
@@ -227,7 +227,7 @@ Recuerda responder SOLO en formato JSON."""
         """Retorna respuesta vacia cuando no se puede extraer."""
         return {
             "observaciones_proveedor": None,
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "estado_mencionado": None,
             "fecha_entrega_mencionada": None,
             "motivo": None,
@@ -277,7 +277,7 @@ Recuerda responder SOLO en formato JSON."""
     def _get_search_system_prompt(self, fecha_hoy: str) -> str:
         """Prompt del sistema para busqueda inteligente."""
         return f"""Eres un asistente que convierte consultas en lenguaje natural a filtros
-de base de datos para un sistema de pedidos de compra de Corona (empresa colombiana).
+de base de datos para un sistema de pedidos de compra de Finca el Cielo.
 
 FECHA DE HOY: {fecha_hoy}
 
@@ -292,7 +292,7 @@ ESQUEMA DE LA TABLA PEDIDOS:
 - estado_pedido: Estado actual. Valores EXACTOS: "Vigente", "Entregado", "Parcial", "Pendiente", "Cancelado", "En Transito"
 - fecha_entrega: Fecha de entrega (formato YYYY-MM-DD)
 - observaciones: Observaciones del proveedor
-- observaciones_corona: Observaciones internas de Corona
+- observaciones_cielo: Observaciones internas de Finca el Cielo
 - motivo: Motivo o razon
 - cantidad_pedido: Cantidad pedida (decimal)
 - por_entregar: Cantidad pendiente (decimal)

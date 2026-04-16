@@ -40,7 +40,7 @@ class PedidoAdmin(admin.ModelAdmin):
             'fields': ('fecha_entrega', 'fecha_programada')
         }),
         ('Estado', {
-            'fields': ('estado_pedido', 'motivo', 'observaciones', 'estado', 'observaciones_corona')
+            'fields': ('estado_pedido', 'motivo', 'observaciones', 'estado', 'observaciones_cielo')
         }),
         ('Metadatos', {
             'fields': ('fuente_supplos', 'fuente_graph', 'ultima_sincronizacion', 'status'),

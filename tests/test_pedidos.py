@@ -60,7 +60,7 @@ class TestPedidoDetail:
 class TestPedidoUpdate:
     def test_actualizar_observaciones_retorna_200(self, client_con_key, pedido):
         url = reverse("integraciones:pedido-update", kwargs={"pk": pedido.pk})
-        response = client_con_key.patch(url, {"observaciones_corona": "Actualizado en QA"})
+        response = client_con_key.patch(url, {"observaciones_cielo": "Actualizado en QA"})
         assert response.status_code == status.HTTP_200_OK
 
     def test_actualizar_estado_registra_trazabilidad(self, client_con_key, pedido):
@@ -71,7 +71,7 @@ class TestPedidoUpdate:
 
     def test_actualizar_pedido_inexistente_retorna_404(self, client_con_key):
         url = reverse("integraciones:pedido-update", kwargs={"pk": 99999})
-        response = client_con_key.patch(url, {"observaciones_corona": "test"})
+        response = client_con_key.patch(url, {"observaciones_cielo": "test"})
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 

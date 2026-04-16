@@ -24,5 +24,5 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("\n  KEY (guardar ahora, no se vuelve a mostrar):"))
         self.stdout.write(self.style.WARNING(f"  {raw_key}"))
         self.stdout.write("\nConfigura esta key en las variables de entorno del bot:")
-        self.stdout.write("  CORONA_API_KEY=" + raw_key)
+        self.stdout.write("  CIELO_API_KEY=" + raw_key)
         self.stdout.write(self.style.SUCCESS("\n=====================================\n"))

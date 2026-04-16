@@ -37,7 +37,7 @@ class TestAIExtractionService:
 
         respuesta_ia = {
             "observaciones_proveedor": "Entrega programada para el lunes",
-            "observaciones_corona": None,
+            "observaciones_cielo": None,
             "estado_mencionado": None,
             "fecha_entrega_mencionada": None,
             "posiciones_correo": [],
@@ -98,7 +98,7 @@ class TestAIExtractionService:
         service = AIExtractionService()
         datos = {
             "observaciones_proveedor": "Entregado",
-            "observaciones_corona": "Verificado",
+            "observaciones_cielo": "Verificado",
             "estado_mencionado": "Entregado",
             "fecha_entrega_mencionada": "2025-04-20",
             "posiciones": [{"posicion": "10", "comentario": "OK"}],

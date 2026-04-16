@@ -223,7 +223,7 @@ class PedidoUpdateAPIView(APIView):
                     fuente=TrazabilidadPedido.FuenteDatos.MANUAL,
                     estado_anterior=estado_anterior,
                     estado_nuevo=pedido.estado_pedido,
-                    observaciones=f"Actualizado manualmente. {request.data.get('observaciones_corona', '')}"
+                    observaciones=f"Actualizado manualmente. {request.data.get('observaciones_cielo', '')}"
                 )
 
             return Response(PedidoSerializer(pedido).data)
@@ -608,7 +608,7 @@ class TestGraphSearchAPIView(APIView):
                         "received_date": str(correo.get("received_date")) if correo.get("received_date") else None,
                         "body_preview": correo.get("body_preview", "")[:200] + "..." if correo.get("body_preview") else None,
                         "observaciones_proveedor": correo.get("observaciones_proveedor"),
-                        "observaciones_corona": correo.get("observaciones_corona"),
+                        "observaciones_cielo": correo.get("observaciones_cielo"),
                         "posiciones_correo": correo.get("posiciones_correo", []),
                         "datos_extraidos": correo.get("datos_extraidos")
                     })
@@ -642,7 +642,7 @@ class PedidoUnificadoAPIView(APIView):
         // Campos opcionales para actualizar si ya existe:
         "estado_pedido": "Entregado",
         "motivo": "Entregado completo",
-        "observaciones_corona": "Verificado"
+        "observaciones_cielo": "Verificado"
     }
 
     Si async=true y necesita consolidacion:
@@ -673,7 +673,7 @@ class PedidoUnificadoAPIView(APIView):
 
         campos_actualizacion = {
             campo: request.data[campo]
-            for campo in ['estado_pedido', 'motivo', 'observaciones_corona']
+            for campo in ['estado_pedido', 'motivo', 'observaciones_cielo']
             if campo in request.data
         }
 
@@ -790,7 +790,7 @@ class PedidoUnificadoAPIView(APIView):
                     fuente=TrazabilidadPedido.FuenteDatos.MANUAL,
                     estado_anterior=estado_anterior,
                     estado_nuevo=pedido.estado_pedido,
-                    observaciones=f"Actualizado via endpoint unificado. {campos_actualizacion.get('observaciones_corona', '')}"
+                    observaciones=f"Actualizado via endpoint unificado. {campos_actualizacion.get('observaciones_cielo', '')}"
                 )
 
 
@@ -872,7 +872,7 @@ class BusquedaInteligentePedidoAPIView(APIView):
         'estado_pedido', 'estado_pedido__in',
         'fecha_entrega', 'fecha_entrega__gte', 'fecha_entrega__lte',
         'fecha_entrega__gt', 'fecha_entrega__lt',
-        'observaciones__icontains', 'observaciones_corona__icontains',
+        'observaciones__icontains', 'observaciones_cielo__icontains',
         'motivo__icontains',
         'cantidad_pedido__gte', 'cantidad_pedido__lte',
         'por_entregar__gt', 'por_entregar__gte', 'por_entregar__lte',
