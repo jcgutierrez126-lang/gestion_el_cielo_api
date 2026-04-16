@@ -1,0 +1,138 @@
+networks:
+  internal:
+    driver: bridge
+
+services:
+
+  corona_integration_web:
+    build: .
+    image: corona_integration_web
+    container_name: corona_integration_web
+
+    command: >
+      gunicorn coronapi.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers=4
+      --threads=4
+      --worker-class=gthread
+      --timeout=60
+      --graceful-timeout=30
+      --max-requests=1000
+      --max-requests-jitter=100
+      --keep-alive=5
+
+    volumes:
+      - .:/app
+
+    env_file: .env
+
+    ports:
+      - "8001:8000"
+
+    restart: always
+
+    mem_limit: 600m
+    mem_reservation: 300m
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    networks:
+      - internal
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  corona_integration_worker:
+    image: corona_integration_web
+    container_name: corona_integration_worker
+
+    command: >
+      celery -A coronapi worker
+      --loglevel=info
+      --without-gossip
+      --without-mingle
+      --without-heartbeat
+
+    volumes:
+      - .:/app
+
+    env_file: .env
+
+    restart: always
+
+    mem_limit: 512m
+    mem_reservation: 256m
+
+    depends_on:
+      - redis
+
+    networks:
+      - internal
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+  corona_integration_beat:
+    image: corona_integration_web
+    container_name: corona_integration_beat
+
+    command: >
+      celery -A coronapi beat
+      --loglevel=info
+      --schedule=/tmp/celerybeat-schedule
+
+    volumes:
+      - .:/app
+
+    env_file: .env
+
+    restart: always
+
+    mem_limit: 256m
+    mem_reservation: 128m
+
+    depends_on:
+      - redis
+
+    networks:
+      - internal
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+  redis:
+    image: redis:7-alpine
+    container_name: corona_integration_redis
+
+    command: redis-server --save "" --appendonly no
+
+    restart: always
+
+    mem_limit: 128m
+    mem_reservation: 64m
+
+    networks:
+      - internal
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
