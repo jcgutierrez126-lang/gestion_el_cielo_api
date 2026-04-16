@@ -1,6 +1,30 @@
-# Finca el Cielo — API Backend
+# Cielo API — Backend Finca La Holanda
 
-Backend de la plataforma contable y administrativa de **Finca el Cielo**. Provee una API REST unificada que integra múltiples fuentes de datos para la gestión de pedidos de compra, trazabilidad de proveedores, procesamiento documental e inteligencia artificial.
+Backend de la plataforma contable y administrativa de **Finca La Holanda**, una finca productora de café y banano ubicada en Colombia. Reemplaza el control manual en hojas de cálculo por una API REST centralizada que gestiona finanzas, producción agrícola, nómina, proveedores y más.
+
+## Contexto del negocio
+
+**Finca La Holanda** opera con dos líneas de producción principales:
+
+- **Café** — venta de café pergamino a cooperativa/agencia, y café tostado propio (bolsas de 250 g, 500 g y 2,5 kg). Incluye seguimiento de floraciones, lotes, árboles, mezcla de abonos y control de enfermedades (broca, roya).
+- **Banano** — venta de banano con registro de ingresos por cosecha.
+
+Las operaciones generan múltiples flujos financieros que antes se gestionaban en Excel:
+
+| Área | Descripción |
+|---|---|
+| Estado de Resultados | Ingresos, costos, utilidad bruta y neta |
+| Balance General | Activos corrientes y no corrientes |
+| Cuentas y Bancos | Agencia, Bancolombia, efectivo, dividendos |
+| Préstamos | Seguimiento de préstamos a empleados y socios |
+| Egresos | Clasificados por categoría (fertilizantes, EPM, nómina, transporte, etc.) |
+| Nómina | Planilla semanal, seguridad social, vales |
+| Producción Café | Floraciones, lotes, árboles, tostión, costos de tueste |
+| Producción Banano | Registro de ventas y cosechas |
+| Proveedores | Directorio y control de deudas |
+| Empleados | Datos, préstamos, planilla frontal/trasera |
+| Inventario | Insumos (herbicidas, fertilizantes, herramientas) |
+| Ganado | Terneros y activos pecuarios |
 
 ## Arquitectura
 
@@ -16,23 +40,14 @@ Backend de la plataforma contable y administrativa de **Finca el Cielo**. Provee
 │  ┌─────────────────────┐  ┌──────────────┐  ┌──────────────┐    │
 │  │ Gunicorn Web        │  │ Celery Worker │  │ Celery Beat  │    │
 │  │ 4 workers × 4 thds  │  │ Tareas async  │  │ Scheduler    │    │
-│  │ Django REST + JWT    │  │ Consolidacion │  │              │    │
-│  └─────────┬───────────┘  └──────┬───────┘  └──────────────┘    │
-│            │  Service Layer       │                               │
-│  ┌─────────▼──────────────────────▼──────────────────────────┐   │
-│  │ ConsolidationService · GraphSearchService · SuplosService │   │
-│  │ AIExtractionService · AzureDocumentService                │   │
-│  └───────────────────────────────────────────────────────────┘   │
-└──────┬─────────────┬─────────────┬───────────────────────────────┘
-       │             │             │
-┌──────▼──────┐ ┌────▼────┐ ┌─────▼──────────────────────────────┐
-│ SQL Server  │ │  Redis  │ │ Servicios Externos                 │
-│ (externo)   │ │  7      │ │ · Microsoft Graph (correos)        │
-│             │ │ Alpine  │ │ · Supplos API (ERP pedidos)        │
-│ 6 modelos   │ │ Docker  │ │ · Azure OpenAI GPT (IA)            │
-│             │ │ Broker  │ │ · Azure Doc Intelligence (OCR)     │
-└─────────────┘ └─────────┘ │ · Azure AD / Entra ID (OAuth)     │
-                             └────────────────────────────────────┘
+│  │ Django REST + JWT    │  │               │  │              │    │
+│  └─────────────────────┘  └───────────────┘  └──────────────┘   │
+└──────┬──────────────┬──────────────────────────────────────────┘
+       │              │
+┌──────▼──────┐  ┌────▼────────────┐
+│ PostgreSQL  │  │  Redis 7        │
+│ 15          │  │  Broker/cache   │
+└─────────────┘  └─────────────────┘
 ```
 
 ## Stack Tecnologico
@@ -41,29 +56,68 @@ Backend de la plataforma contable y administrativa de **Finca el Cielo**. Provee
 |------|------------|
 | Framework | Django 5.1.6 + Django REST Framework 3.15.2 |
 | Auth | API Key (`X-API-Key`) + JWT (SimpleJWT) — 30 min access, 7 dias refresh |
-| Base de datos | SQL Server (mssql-django + ODBC Driver 18) |
+| Base de datos | PostgreSQL 15 |
 | Cache / Broker | Redis 7 (contenedor Docker) |
 | Async | Celery 5.4 (worker + beat) |
 | IA | Azure OpenAI GPT (structuring + orchestrator) |
 | OCR | Azure Document Intelligence (prebuilt-layout) |
 | Correos | Microsoft Graph API + MSAL |
-| ERP | Supplos REST API |
 | Server | Gunicorn (gthread, 4×4 = 16 concurrent) |
 | Container | Docker + Docker Compose |
-| CI/CD | GitHub Actions → Docker Hub → SSH deploy |
+| CI/CD | Ordo CI/CD → SSH deploy |
+
+---
+
+## Modulos del Sistema
+
+### Financiero
+- Estado de Resultados (ingresos, costos, utilidad)
+- Balance General (activos corrientes y no corrientes)
+- Cuentas bancarias y efectivo (Agencia, Bancolombia, Dividendos)
+- Préstamos a empleados y socios con trazabilidad de pagos
+- Registro de egresos por categoría con histórico anual
+
+### Café
+- Venta de café pergamino (cooperativa / agencia)
+- Café tostado: costos de tueste, trilla, empaque y precio de venta por presentación (250 g, 500 g, 2,5 kg)
+- Floraciones: registro y seguimiento por lote
+- Lotes y árboles: inventario de la plantación
+- Mezcla de abonos y plan de fertilización
+- Control de enfermedades: broca, roya
+
+### Banano
+- Registro de ventas y cosechas por periodo
+
+### Nómina y RRHH
+- Empleados: datos básicos y laborales
+- Planilla semanal (frontal y trasera)
+- Seguridad social
+- Vales y anticipos
+- Préstamos a empleados
+
+### Operaciones
+- Egresos clasificados: acueducto, EPM, fertilizantes, herbicidas, transporte, mantenimientos, viáticos, siembra, construcciones, animales, herramientas, impuestos, etc.
+- Control semanal de gastos
+- Planeación semanal
+- Inventario de insumos
+
+### Proveedores y Terceros
+- Directorio de proveedores
+- Deudas y pagos pendientes
+
+### Activos
+- Ganado (terneros)
+- Propiedades, beneficiadero, equipos, moto
+- Gastos diferidos
 
 ---
 
 ## Autenticacion
 
-La API soporta dos metodos:
-
 | Metodo | Header | Uso |
 |--------|--------|-----|
 | **API Key** | `X-API-Key: <key>` | Bots, integraciones automatizadas |
-| **JWT** | `Authorization: Bearer <token>` | Login de usuarios (solo `/users/`) |
-
-Los endpoints de pedidos (`/api/v1/pedidos/`) requieren exclusivamente **API Key**.
+| **JWT** | `Authorization: Bearer <token>` | Login de usuarios del aplicativo |
 
 ### Generar una API Key
 
@@ -71,38 +125,13 @@ Los endpoints de pedidos (`/api/v1/pedidos/`) requieren exclusivamente **API Key
 docker exec cielo_api_web python manage.py crear_api_key "nombre-cliente"
 ```
 
-Se pueden tener multiples keys (una por cliente/bot).
-
 ---
 
 ## Endpoints API
 
 Base URL: `/api/v1/`
 
-### Pedidos
-
-| Metodo | Endpoint | Descripcion |
-|--------|----------|-------------|
-| POST | `/pedidos/consultar/` | Endpoint unificado — consultar/crear/actualizar pedido. Soporta `async=true` |
-| POST | `/pedidos/busqueda-ia/` | Busqueda inteligente — consulta en lenguaje natural con IA |
-| POST | `/pedidos/buscar/` | Buscar y consolidar pedido desde Supplos + Graph |
-| GET | `/pedidos/` | Listar pedidos (paginado, filtros) |
-| GET | `/pedidos/{numero}/` | Detalle por numero de pedido |
-| GET | `/pedidos/detalle/{id}/` | Detalle por ID interno |
-| PATCH | `/pedidos/{id}/actualizar/` | Actualizar estado/observaciones |
-| POST | `/pedidos/{numero}/resincronizar/` | Forzar resincronizacion |
-| GET | `/pedidos/{numero}/trazabilidad/` | Historial de cambios |
-| GET | `/pedidos/tarea/{task_id}/` | Estado de tarea asincrona (Celery) |
-| GET | `/pedidos/estadisticas/` | Estadisticas por estado y fuente |
-| GET | `/pedidos/logs/` | Logs de consultas |
-
-### Correos
-
-| Metodo | Endpoint | Descripcion |
-|--------|----------|-------------|
-| GET/POST | `/pedidos/correos/` | CRUD buzones autorizados |
-| GET/PUT/DELETE | `/pedidos/correos/{id}/` | Detalle buzon |
-| GET | `/pedidos/correos-procesados/` | Correos ya procesados |
+> Los endpoints de dominio se agregarán a medida que se implementen los modelos.
 
 ### Usuarios
 
@@ -117,67 +146,6 @@ Base URL: `/api/v1/`
 
 ---
 
-## Busqueda Inteligente con IA
-
-Convierte lenguaje natural a filtros de base de datos usando Azure OpenAI:
-
-```bash
-POST /api/v1/pedidos/busqueda-ia/
-X-API-Key: <key>
-
-{
-    "consulta": "pedidos retrasados del proveedor PILOTO en los ultimos 3 meses"
-}
-```
-
-Respuesta:
-```json
-{
-    "consulta": "pedidos retrasados del proveedor PILOTO en los ultimos 3 meses",
-    "descripcion_ia": "Pedidos de PILOTO con fecha de entrega vencida en los ultimos 90 dias",
-    "filtros_aplicados": {
-        "razon_social__icontains": "PILOTO",
-        "fecha_entrega__gte": "2025-11-10",
-        "estado_pedido__in": ["Vigente", "Parcial", "Pendiente"]
-    },
-    "total": 12,
-    "resultados": [...]
-}
-```
-
----
-
-## Endpoint Unificado (async)
-
-Para consultas pesadas se ejecutan en background via Celery:
-
-```bash
-POST /api/v1/pedidos/consultar/
-X-API-Key: <key>
-
-{
-    "numero_pedido": 4501833743,
-    "async": true
-}
-```
-
-Respuesta `202 Accepted`:
-```json
-{
-    "task_id": "abc123-def456",
-    "status": "PENDING",
-    "message": "Tarea encolada"
-}
-```
-
-Consultar estado:
-```bash
-GET /api/v1/pedidos/tarea/abc123-def456/
-X-API-Key: <key>
-```
-
----
-
 ## Variables de Entorno
 
 ```bash
@@ -186,37 +154,32 @@ SECRET_KEY=your-secret-key
 DEBUG=False
 ALLOWED_HOSTS=cieloapi.lambdaanalytics.co,localhost
 
-# SQL Server
-SQL_NAME=cielo_db
-SQL_USER=sa
-SQL_PASS=password
-SQL_HOST=ip-servidor-sql
-SQL_PORT=1433
+# PostgreSQL
+DB_NAME=cielo_db
+DB_USER=cielo_user
+DB_PASS=tu-password
+DB_HOST=postgres       # nombre del servicio en Docker Compose
+DB_PORT=5432
 
 # Microsoft Graph (correos)
-CORREO_CLIENT_ID=your-app-id
-CORREO_TENANT_ID=your-tenant-id
-CORREO_SECRET_KEY=your-client-secret
+CORREO_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+CORREO_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+CORREO_SECRET_KEY=tu-client-secret
 EMAIL_HOST_USER=correo@fincaelcielo.com
 
-# Supplos API (ERP)
-SUPLOS_API_URL=https://api.suplos.com
-SUPLOS_API_EMAIL=your-email
-SUPLOS_API_PASSWORD=your-password
-
 # Azure OpenAI
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-AZURE_OPENAI_API_KEY=your-key
+AZURE_OPENAI_ENDPOINT=https://tu-recurso.openai.azure.com/
+AZURE_OPENAI_API_KEY=tu-key
 AZURE_OPENAI_STRUCTURING_DEPLOYMENT=gpt-4.1-structuring
 AZURE_OPENAI_STRUCTURING_API_VERSION=2025-01-01-preview
 AZURE_OPENAI_ORCHESTRATOR_DEPLOYMENT=gpt-5.2-chat-orchestrator
 AZURE_OPENAI_ORCHESTRATOR_API_VERSION=2025-04-01-preview
 
-# Azure Document Intelligence (OCR PDFs/imagenes)
-AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
-AZURE_DOCUMENT_INTELLIGENCE_KEY=your-key
+# Azure Document Intelligence (OCR)
+AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://tu-recurso.cognitiveservices.azure.com/
+AZURE_DOCUMENT_INTELLIGENCE_KEY=tu-key
 
-# Celery (Redis contenedor Docker)
+# Celery + Redis
 CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/0
 
@@ -228,29 +191,11 @@ CORS_ALLOWED_ORIGINS=https://cieloapi.lambdaanalytics.co,http://localhost:3000
 
 ## Deployment
 
-### Produccion
-
-El CI/CD usa GitHub Actions con dos jobs:
-
-1. **test** — corre `pytest tests/` contra una DB PostgreSQL temporal (en el runner)
-2. **build-and-deploy** — construye imagen Docker, la sube a Docker Hub y despliega via SSH
-
-**GitHub Secrets requeridos:**
-
-| Secret | Descripcion |
-|--------|-------------|
-| `DOCKER_USERNAME` | Usuario de Docker Hub |
-| `DOCKER_PASSWORD` | Password de Docker Hub |
-| `SERVER_HOST` | IP del servidor |
-| `SERVER_USER` | Usuario SSH |
-| `SERVER_SSH_KEY` | Llave privada SSH |
-| `SERVER_PORT` | Puerto SSH |
-
 ### Docker Compose
 
 ```bash
 # Primera vez
-git clone https://github.com/LambdaAnalyticsSAS/gestion_el_cielo_api.git
+git clone https://github.com/jcgutierrez126-lang/gestion_el_cielo_api.git
 cd gestion_el_cielo_api
 cp .env.example .env   # completar variables
 docker compose up -d --build
@@ -263,26 +208,27 @@ docker compose up -d --build
 docker exec cielo_api_web python manage.py migrate
 ```
 
-Servicios:
+### Servicios Docker
+
 | Contenedor | Descripcion | Puerto |
 |------------|-------------|--------|
 | `cielo_api_web` | API (Gunicorn) | 8001:8000 |
 | `cielo_api_worker` | Celery worker (tareas async) | — |
 | `cielo_api_beat` | Celery scheduler | — |
 | `cielo_api_redis` | Broker + backend resultados | interno |
+| `cielo_api_postgres` | Base de datos PostgreSQL 15 | interno |
 
-### Migraciones (primera vez con SQL Server)
+### Migraciones
 
 ```bash
-# Local — generar migraciones (no necesita conexion a BD)
+# Generar (local)
 set PYTHONPATH=src
 python manage.py makemigrations usuarios
 python manage.py makemigrations integraciones
 git add src/apps/*/migrations/
-git commit -m "feat: initial migrations for SQL Server"
 git push
 
-# Servidor — aplicar
+# Aplicar (servidor)
 docker exec cielo_api_web python manage.py migrate
 ```
 
@@ -294,82 +240,38 @@ docker exec cielo_api_web python manage.py migrate
 gestion_el_cielo_api/
 ├── src/
 │   ├── apps/
-│   │   ├── integraciones/
-│   │   │   ├── api/
-│   │   │   │   ├── views.py             # API views
-│   │   │   │   ├── serializers.py       # DRF serializers
-│   │   │   │   └── urls.py              # URL routing
-│   │   │   ├── services/
-│   │   │   │   ├── consolidation_service.py   # Orquestador principal
-│   │   │   │   ├── supplos_service.py         # Integracion Supplos ERP
-│   │   │   │   ├── graph_search_service.py    # Busqueda correos Graph
-│   │   │   │   ├── ai_extraction_service.py   # Azure OpenAI (extraccion + IA)
-│   │   │   │   └── azure_document_service.py  # Azure Document Intelligence
-│   │   │   ├── authentication.py        # APIKeyAuthentication + IsAPIKeyAuthenticated
-│   │   │   ├── models.py                # 6 modelos
-│   │   │   ├── tasks.py                 # Tareas Celery
-│   │   │   └── management/commands/
-│   │   │       └── crear_api_key.py     # Comando para generar API Keys
-│   │   └── usuarios/                    # Auth + CRUD usuarios
-│   └── coronapi/
-│       ├── settings.py                  # Configuracion Django
-│       ├── celery.py                    # Config Celery
-│       ├── urls.py                      # URL root
-│       └── correo.py                    # Auth MSAL (Graph)
-├── tests/
-│   ├── test_auth.py                     # Tests de autenticacion y API Key
-│   ├── test_pedidos.py                  # Tests de endpoints de pedidos
-│   └── test_usuarios.py                 # Tests de login y refresh token
-├── docker-compose.yml                   # Web + Worker + Beat + Redis
-├── Dockerfile                           # Python 3.13-slim + ODBC Driver 18
+│   │   ├── integraciones/        # Motor principal de consolidacion
+│   │   │   ├── api/              # Views, serializers, URLs
+│   │   │   ├── services/         # Logica de negocio (Supplos, Graph, IA, OCR)
+│   │   │   ├── models.py         # Modelos de datos
+│   │   │   └── tasks.py          # Tareas Celery
+│   │   └── usuarios/             # Auth + CRUD usuarios
+│   └── cieloapi/
+│       ├── settings.py           # Configuracion Django
+│       ├── celery.py             # Config Celery
+│       ├── urls.py               # URL root
+│       └── correo.py             # Auth MSAL (Graph)
+├── tests/                        # Suite de tests (pytest)
+├── docs/                         # Documentacion y fuentes de datos
+├── docker-compose.yml            # Web + Worker + Beat + Redis + Postgres
+├── Dockerfile                    # Python 3.13-slim + psycopg2
 ├── requirements.txt
-├── pytest.ini
 └── .ordo/
-    ├── ci.yml                           # CI: tests automatizados
-    └── cd.yml                           # CD: build y deploy SSH
+    ├── ci.yml                    # CI: tests automatizados
+    └── cd.yml                    # CD: build y deploy SSH
 ```
-
----
-
-## Modelos de Datos
-
-| Modelo | Descripcion |
-|--------|-------------|
-| **Pedido** | Pedido consolidado (Supplos + Graph). Unique: documento_compras + posicion |
-| **TrazabilidadPedido** | Historial de cambios por pedido (audit trail) |
-| **LogConsulta** | Log de consultas a APIs externas |
-| **CorreoAutorizado** | Buzones habilitados para busqueda en Graph |
-| **CorreoProcesado** | Correos ya procesados (evita duplicados) |
-| **APIKey** | Keys de acceso para bots e integraciones (hash SHA-256) |
-
----
-
-## Procesamiento de Correos
-
-```
-Correo tiene adjuntos PDF/imagen + Azure DI configurado?
-  SI  → Graph descarga adjuntos → Azure DI extrae texto → Azure OpenAI estructura JSON
-  NO  → Body HTML del correo → Azure OpenAI estructura JSON (flujo default)
-```
-
-Fallbacks:
-1. Azure DI no configurado → flujo HTML transparente
-2. Azure DI falla → warning + flujo HTML
-3. Sin adjuntos PDF/imagen → flujo HTML directo
 
 ---
 
 ## Escalabilidad
 
-| Workers | Threads | Conexiones simultaneas | RAM |
-|---------|---------|------------------------|-----|
-| 4 | 4 | 16 | 600MB |
-| 6 | 4 | 24 | 900MB |
-| 8 | 4 | 32 | 1200MB |
+| Workers | Threads | Conexiones simultaneas | RAM aprox. |
+|---------|---------|------------------------|------------|
+| 4 | 4 | 16 | 600 MB |
+| 6 | 4 | 24 | 900 MB |
+| 8 | 4 | 32 | 1200 MB |
 
-Estrategias:
-- Consultas pesadas (Supplos + Graph + IA) en **Celery** con `async=true`
-- Gunicorn maneja lecturas rapidas de DB directamente
+- Tareas pesadas en **Celery** con `async=true`
+- Gunicorn atiende lecturas rapidas de BD directamente
 - Redis cachea resultados de tareas por 1 hora
-- Busquedas de correos en **paralelo** (ThreadPoolExecutor)
 - Rate limiting: 200 req/min por usuario autenticado
