@@ -5,38 +5,30 @@ from django.conf.urls.static import static
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+
 class APIRootView(APIView):
-    """
-    API Root - Finca el Cielo
-    """
     permission_classes = []
 
     def get(self, request):
         return Response({
-            "api": "Finca el Cielo API",
+            "api": "Finca El Cielo API",
             "version": "1.0",
             "endpoints": {
-                "users": "/api/v1/users/",
-                "pedidos": "/api/v1/pedidos/",
-                "docs": "https://cieloapi.lambdaanalytics.co/docs/",
+                "users":      "/api/v1/users/",
+                "finanzas":   "/api/v1/finanzas/",
+                "produccion": "/api/v1/produccion/",
+                "nomina":     "/api/v1/nomina/",
             },
             "status": "operational"
         })
 
 
 urlpatterns = [
-    # Admin
     path('admin/', admin.site.urls),
-
-    # API Root
     path('api/', APIRootView.as_view(), name='api-root'),
 
-    # API v1 (versionado)
-    path('api/v1/users/', include(('apps.usuarios.api.urls', 'usuarios'), namespace='usuarios')),
-    path('api/v1/pedidos/', include(('apps.integraciones.api.urls', 'integraciones'), namespace='integraciones')),
-
-    # Legacy URLs (backwards compatibility) - redirigen a v1
-    path('api/users/', include('apps.usuarios.api.urls')),
-    path('api/pedidos/', include('apps.integraciones.api.urls')),
-
+    path('api/v1/users/',      include(('apps.usuarios.api.urls', 'usuarios'), namespace='usuarios')),
+    path('api/v1/finanzas/',   include('apps.finanzas.urls')),
+    path('api/v1/produccion/', include('apps.produccion.urls')),
+    path('api/v1/nomina/',     include('apps.nomina.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
