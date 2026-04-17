@@ -18,12 +18,28 @@ TIPOS_LABOR_VALIDOS = [
     'auxilio_transporte', 'permiso', 'nomina', 'contrato',
 ]
 
-SYSTEM_PROMPT = """Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
-Tu única tarea es leer imágenes de planillas semanales manuscritas y devolver un JSON estructurado.
+LOTES_FINCA = {
+    "1": "La Milagrosa", "2": "El Tanque", "3": "La Cruz",
+    "4": "San José", "5": "El Niño", "6": "San Charbel",
+    "7": "La Ceja Palos", "8": "La Ceja Zocas", "9": "Huerta",
+    "10": "Hoyo Caliente", "11": "Guaduas", "12": "La Bola",
+    "13": "El Llano", "14": "Destechada",
+}
+
+CODIGOS_LABOR = {
+    "R": "recoleccion", "G": "guadana", "A": "abono", "B": "banano",
+    "E": "embolsada", "S": "siembra", "C": "cosecha", "V": "varios",
+    "CT": "contrato", "P": "permiso", "N": "nomina",
+}
+
+SYSTEM_PROMPT = f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
+Tu única tarea es leer imágenes de planillas manuscritas y devolver un JSON estructurado.
 
 REGLAS ESTRICTAS:
 - Devuelve SOLO JSON válido, sin texto antes ni después, sin ```json```.
 - Si un campo está en blanco o ilegible, usa null.
+- La planilla usa números para los lotes: {LOTES_FINCA}. Convierte el número al nombre.
+- La planilla usa letras para las labores: {CODIGOS_LABOR}. Convierte la letra al nombre.
 - Para tipo_labor normaliza al valor más cercano de esta lista exacta:
   recoleccion, guadana, abono, varios, banano, cosecha, siembra,
   embolsada, auxilio_labor, auxilio_transporte, permiso, nomina, contrato
