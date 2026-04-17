@@ -175,22 +175,6 @@ CACHES = {
     }
 }
 
-# --- CELERY SETTINGS ---
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TASK_TRACK_STARTED = True
-CELERY_RESULT_EXPIRES = 3600  # Resultados expiran en 1 hora
-
-# --- CELERY BEAT SCHEDULE ---
-CELERY_BEAT_SCHEDULE = {
-    'limpiar-registros-antiguos': {
-        'task': 'apps.integraciones.tasks.limpiar_registros_antiguos',
-        'schedule': 86400,  # Cada 24 horas
-    },
-}
 
 # --- AZURE DOCUMENT INTELLIGENCE ---
 AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT", "")
