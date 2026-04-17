@@ -1,0 +1,24 @@
+name: CI corona-integration
+description: Integración continua. Corre tests unitarios en cada push. No despliega nada.
+server: server-aws-3
+
+steps:
+  - name: Pull latest code
+    run: cd /home/admin/apps/corona-integration && git pull origin feature/integracion-pedidos
+
+  - name: Tests unitarios
+    run: |
+      cd /home/admin/apps/corona-integration
+      pip install -r requirements.txt -q
+      pip install pytest-timeout -q
+      DJANGO_SETTINGS_MODULE=coronapi.settings_test \
+        PYTHONPATH=src \
+        pytest tests/ -v --tb=short --timeout=30
+    timeout: 180
+
+  - name: Verificar migraciones pendientes
+    run: |
+      cd /home/admin/apps/corona-integration
+      DJANGO_SETTINGS_MODULE=coronapi.settings_test \
+        PYTHONPATH=src \
+        python manage.py migrate --check --dry-run 2>&1 || true

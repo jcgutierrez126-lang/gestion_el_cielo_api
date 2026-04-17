@@ -1,0 +1,39 @@
+.env
+db.sqlite3
+media/
+/media/
+
+env/
+/env/
+
+.vscode/
+/.vscode/
+settings.json
+service_account.json
+
+
+# Ignorar archivos de caché de Python
+**/__pycache__/
+**/*.pyc
+*.pyc
+__pycache__/
+web.config
+bd.json
+
+# Ignorar staticfiles en desarrollo
+staticfiles/
+/staticfiles/
+
+.claude/
+/.claude/
+
+# Archivos sensibles
+correo/
+/correo/
+certificados/
+/certificados/
+
+# Tests
+.coverage
+htmlcov/
+.pytest_cache/

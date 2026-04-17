@@ -1,0 +1,14 @@
+name: CD corona-integration
+description: Despliegue continuo. Solo corre cuando hay merge a dev o main. Despliega en producción.
+server: server-aws-3
+
+steps:
+  - name: Pull latest code
+    run: cd /home/admin/apps/corona-integration && git pull origin dev
+
+  - name: Build and restart
+    run: cd /home/admin/apps/corona-integration && docker compose up -d --build
+    timeout: 300
+
+  - name: Health check
+    run: docker ps | grep corona_integration_web
