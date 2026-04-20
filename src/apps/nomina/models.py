@@ -2,28 +2,32 @@ from django.db import models
 from cieloapi.base_model import BaseModel
 
 
-TIPOS_LABOR = [
-    ('recoleccion', 'Recolección'),
-    ('guadana', 'Guadaña'),
-    ('abono', 'Abono'),
-    ('varios', 'Varios'),
-    ('banano', 'Banano'),
-    ('cosecha', 'Cosecha'),
-    ('siembra', 'Siembra'),
-    ('embolsada', 'Embolsada'),
-    ('auxilio_labor', 'Auxilio Labor'),
-    ('auxilio_transporte', 'Auxilio Transporte'),
-    ('permiso', 'Permiso'),
-    ('nomina', 'Nómina'),
-    ('contrato', 'Contrato'),
-]
+class TipoLabor(BaseModel):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
 
-TIPOS_COBRO = [
-    ('kilos', 'Kilos'),
-    ('jornal', 'Jornal'),
-    ('contrato', 'Contrato'),
-    ('nomina', 'Nómina'),
-]
+    class Meta:
+        db_table = "tipos_labor"
+        ordering = ['nombre']
+        verbose_name = "Tipo de labor"
+        verbose_name_plural = "Tipos de labor"
+
+    def __str__(self):
+        return self.nombre
+
+
+class TipoCobro(BaseModel):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+
+    class Meta:
+        db_table = "tipos_cobro"
+        ordering = ['nombre']
+        verbose_name = "Tipo de cobro"
+        verbose_name_plural = "Tipos de cobro"
+
+    def __str__(self):
+        return self.nombre
 
 
 class Empleado(BaseModel):
@@ -67,11 +71,13 @@ class ControlSemanal(BaseModel):
     )
     fecha_inicio = models.DateField(db_index=True, verbose_name="Fecha inicio")
     fecha_fin = models.DateField(verbose_name="Fecha fin")
-    tipo_labor = models.CharField(
-        max_length=30, choices=TIPOS_LABOR, db_index=True, verbose_name="Tipo labor"
+    tipo_labor = models.ForeignKey(
+        TipoLabor, on_delete=models.PROTECT,
+        verbose_name="Tipo labor"
     )
-    tipo_cobro = models.CharField(
-        max_length=20, choices=TIPOS_COBRO, verbose_name="Tipo cobro"
+    tipo_cobro = models.ForeignKey(
+        TipoCobro, on_delete=models.PROTECT,
+        verbose_name="Tipo cobro"
     )
     lote = models.CharField(max_length=100, blank=True, null=True, verbose_name="Lote")
     kilos = models.DecimalField(
@@ -101,7 +107,7 @@ class ControlSemanal(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.empleado} | {self.fecha_inicio} — {self.fecha_fin} | {self.get_tipo_labor_display()}"
+        return f"{self.empleado} | {self.fecha_inicio} — {self.fecha_fin} | {self.tipo_labor}"
 
 
 class PrestamoEmpleado(BaseModel):

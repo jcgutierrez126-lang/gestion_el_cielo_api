@@ -1,5 +1,19 @@
 from rest_framework import serializers
-from .models import Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo
+from .models import Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
+
+
+class TipoLaborSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoLabor
+        fields = ['id', 'nombre', 'activo', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class TipoCobroSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoCobro
+        fields = ['id', 'nombre', 'activo', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class EmpleadoSerializer(serializers.ModelSerializer):
@@ -17,14 +31,17 @@ class EmpleadoSerializer(serializers.ModelSerializer):
 
 class ControlSemanalSerializer(serializers.ModelSerializer):
     empleado_nombre = serializers.CharField(source='empleado.nombre_completo', read_only=True)
+    tipo_labor_nombre = serializers.CharField(source='tipo_labor.nombre', read_only=True)
+    tipo_cobro_nombre = serializers.CharField(source='tipo_cobro.nombre', read_only=True)
 
     class Meta:
         model = ControlSemanal
         fields = [
             'id', 'empleado', 'empleado_nombre',
             'fecha_inicio', 'fecha_fin',
-            'tipo_labor', 'tipo_cobro', 'lote',
-            'kilos', 'jornales', 'costo_unidad', 'valor',
+            'tipo_labor', 'tipo_labor_nombre',
+            'tipo_cobro', 'tipo_cobro_nombre',
+            'lote', 'kilos', 'jornales', 'costo_unidad', 'valor',
             'observaciones', 'es_vale',
             'created_at', 'updated_at',
         ]
@@ -59,7 +76,6 @@ class PrestamoEmpleadoSerializer(serializers.ModelSerializer):
 
 
 class PrestamoEmpleadoListSerializer(serializers.ModelSerializer):
-    """Serializer sin abonos anidados para el listado."""
     empleado_nombre = serializers.CharField(source='empleado.nombre_completo', read_only=True)
 
     class Meta:

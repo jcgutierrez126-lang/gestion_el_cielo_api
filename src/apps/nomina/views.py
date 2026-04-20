@@ -2,12 +2,44 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo
+from .models import Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
 from .serializers import (
     EmpleadoSerializer, ControlSemanalSerializer,
     PrestamoEmpleadoSerializer, PrestamoEmpleadoListSerializer,
-    AbonoPrestamoSerializer,
+    AbonoPrestamoSerializer, TipoLaborSerializer, TipoCobroSerializer,
 )
+
+
+class TipoLaborViewSet(viewsets.ModelViewSet):
+    serializer_class = TipoLaborSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nombre']
+    ordering_fields = ['nombre']
+
+    def get_queryset(self):
+        qs = TipoLabor.objects.all()
+        activo = self.request.query_params.get('activo')
+        if activo is not None:
+            qs = qs.filter(activo=activo.lower() == 'true')
+        return qs.order_by('nombre')
+
+
+class TipoCobroViewSet(viewsets.ModelViewSet):
+    serializer_class = TipoCobroSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nombre']
+    ordering_fields = ['nombre']
+
+    def get_queryset(self):
+        qs = TipoCobro.objects.all()
+        activo = self.request.query_params.get('activo')
+        if activo is not None:
+            qs = qs.filter(activo=activo.lower() == 'true')
+        return qs.order_by('nombre')
 
 
 class EmpleadoViewSet(viewsets.ModelViewSet):
@@ -30,10 +62,12 @@ class ControlSemanalViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['lote', 'observaciones']
-    ordering_fields = ['fecha_inicio', 'fecha_fin', 'valor', 'tipo_labor', 'created_at']
+    ordering_fields = ['fecha_inicio', 'fecha_fin', 'valor', 'created_at']
 
     def get_queryset(self):
-        qs = ControlSemanal.objects.select_related('empleado').all()
+        qs = ControlSemanal.objects.select_related(
+            'empleado', 'tipo_labor', 'tipo_cobro'
+        ).all()
         p = self.request.query_params
 
         empleado = p.get('empleado')
@@ -51,9 +85,9 @@ class ControlSemanalViewSet(viewsets.ModelViewSet):
         if fecha_hasta:
             qs = qs.filter(fecha_inicio__lte=fecha_hasta)
         if tipo_labor:
-            qs = qs.filter(tipo_labor=tipo_labor)
+            qs = qs.filter(tipo_labor_id=tipo_labor)
         if tipo_cobro:
-            qs = qs.filter(tipo_cobro=tipo_cobro)
+            qs = qs.filter(tipo_cobro_id=tipo_cobro)
         if es_vale is not None:
             qs = qs.filter(es_vale=es_vale.lower() == 'true')
         if lote:
