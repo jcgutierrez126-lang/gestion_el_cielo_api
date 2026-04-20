@@ -140,7 +140,7 @@ class ResumenView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.produccion.models import VentaCafe, VentaBanano
+        from apps.produccion.models import VentaCafe, VentaCafeTostado, VentaBanano
         from apps.nomina.models import Empleado
         from decimal import Decimal
 
@@ -152,12 +152,17 @@ class ResumenView(APIView):
                 if row['total']
             }
 
-        ing_map    = _agg(Ingreso.objects.all(),      'cuenta_destino_id', 'valor')
-        cafe_map   = _agg(VentaCafe.objects.all(),    'cuenta_destino_id', 'valor_neto')
-        banano_map = _agg(VentaBanano.objects.all(),  'cuenta_destino_id', 'valor_total')
-        egr_map    = _agg(Egreso.objects.all(),       'cuenta_id',         'valor')
-        trans_in   = _agg(Transaccion.objects.all(),  'cuenta_destino_id', 'valor')
-        trans_out  = _agg(Transaccion.objects.all(),  'cuenta_origen_id',  'valor')
+        ing_map      = _agg(Ingreso.objects.all(),                                       'cuenta_destino_id', 'valor')
+        cafe_map     = _agg(VentaCafe.objects.all(),                                     'cuenta_destino_id', 'valor_neto')
+        tostado_map  = _agg(VentaCafeTostado.objects.all(),                              'cuenta_destino_id', 'valor')
+        banano_map   = _agg(VentaBanano.objects.all(),                                   'cuenta_destino_id', 'valor_total')
+        egr_map      = _agg(Egreso.objects.all(),                                        'cuenta_id',         'valor')
+        # Pagos = Transacciones con cuenta_origen nula (pagos externos entrantes)
+        pagos_map    = _agg(Transaccion.objects.filter(cuenta_origen__isnull=True),      'cuenta_destino_id', 'valor')
+        # From = Transacciones entre cuentas internas (entrantes)
+        from_map     = _agg(Transaccion.objects.filter(cuenta_origen__isnull=False),     'cuenta_destino_id', 'valor')
+        # To = Transacciones salientes de esta cuenta
+        to_map       = _agg(Transaccion.objects.filter(cuenta_origen__isnull=False),     'cuenta_origen_id',  'valor')
 
         D = Decimal
         cuentas = []
@@ -165,12 +170,14 @@ class ResumenView(APIView):
 
         for c in Cuenta.objects.filter(status=True).order_by('nombre'):
             cid = c.id
-            ingresos_c = D(str(ing_map.get(cid, 0)))
-            cafe_c     = D(str(cafe_map.get(cid, 0)))
-            banano_c   = D(str(banano_map.get(cid, 0)))
-            egresos_c  = D(str(egr_map.get(cid, 0)))
-            pagos_c    = D(str(trans_in.get(cid, 0))) - D(str(trans_out.get(cid, 0)))
-            saldo_c    = c.saldo_inicial + ingresos_c + cafe_c + banano_c - egresos_c + pagos_c
+            ingresos_c  = D(str(ing_map.get(cid, 0)))
+            cafe_c      = D(str(cafe_map.get(cid, 0))) + D(str(tostado_map.get(cid, 0)))
+            banano_c    = D(str(banano_map.get(cid, 0)))
+            egresos_c   = D(str(egr_map.get(cid, 0)))
+            pagos_c     = D(str(pagos_map.get(cid, 0)))
+            from_c      = D(str(from_map.get(cid, 0)))
+            to_c        = D(str(to_map.get(cid, 0)))
+            saldo_c     = c.saldo_inicial + ingresos_c + cafe_c + banano_c - egresos_c + pagos_c + from_c - to_c
 
             cuentas.append({
                 'nombre':   c.nombre,
@@ -181,6 +188,8 @@ class ResumenView(APIView):
                 'banano':   str(banano_c),
                 'egresos':  str(egresos_c),
                 'pagos':    str(pagos_c),
+                'from':     str(from_c),
+                'to':       str(to_c),
             })
             saldo_total += saldo_c
 
