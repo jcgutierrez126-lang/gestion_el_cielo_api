@@ -3,9 +3,14 @@ from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
 
 
 class CuentaSerializer(serializers.ModelSerializer):
+    saldo = serializers.DecimalField(
+        source='saldo_inicial', max_digits=15, decimal_places=2, required=False
+    )
+    activa = serializers.BooleanField(source='status', required=False, default=True)
+
     class Meta:
         model = Cuenta
-        fields = ['id', 'nombre', 'tipo', 'saldo_inicial', 'created_at', 'updated_at']
+        fields = ['id', 'nombre', 'tipo', 'saldo', 'activa', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 
