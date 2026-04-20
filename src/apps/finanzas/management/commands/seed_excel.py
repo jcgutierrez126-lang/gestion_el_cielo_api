@@ -330,22 +330,23 @@ class Command(BaseCommand):
                 continue
             nombre = _s(row[0])
             cedula = str(int(row[2])) if row[2] and isinstance(row[2], (int, float)) else (_s(row[2]) or None)
-            Empleado.objects.get_or_create(
+            data = dict(
                 nombre_completo=nombre,
-                defaults=dict(
-                    cedula=cedula,
-                    telefono=_s(row[1]) or None,
-                    labor=_s(row[3]) or None,
-                    jornal=_dec(row[4]),
-                    fecha_ingreso=_date(row[5]),
-                    salario_mensual=_dec(row[6]),
-                    salario_semanal=_dec(row[7]),
-                    eps=_s(row[9]) or None,
-                    pension=_s(row[10]) or None,
-                    arl=_s(row[11]) or None,
-                    caja_compensacion=_s(row[12]) or None,
-                ),
+                telefono=_s(row[1]) or None,
+                labor=_s(row[3]) or None,
+                jornal=_dec(row[4]),
+                fecha_ingreso=_date(row[5]),
+                salario_mensual=_dec(row[6]),
+                salario_semanal=_dec(row[7]),
+                eps=_s(row[9]) or None,
+                pension=_s(row[10]) or None,
+                arl=_s(row[11]) or None,
+                caja_compensacion=_s(row[12]) or None,
             )
+            if cedula:
+                Empleado.objects.update_or_create(cedula=cedula, defaults=data)
+            else:
+                Empleado.objects.update_or_create(nombre_completo=nombre, defaults={k: v for k, v in data.items() if k != 'nombre_completo'})
             created += 1
         self.stdout.write(f"  Empleados: {created} procesados")
 
