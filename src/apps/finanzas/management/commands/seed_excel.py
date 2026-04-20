@@ -2,12 +2,10 @@
 Management command: seed_excel
 
 Usage:
-    python src/manage.py seed_excel /path/to/Finca\ LA\ HOLANDA.xlsx
+    python manage.py seed_excel /tmp/finca_la_holanda.xlsx
 
 Populates the database from the historical Excel spreadsheet.
-Skips Control Semanal (excluded per user request).
-Safe to re-run: uses get_or_create for unique records; bulk_create with
-ignore_conflicts=True for transactional data (no duplicates on second run).
+Skips Control Semanal. Uses read_only=True to minimize RAM usage.
 """
 from __future__ import annotations
 
@@ -226,7 +224,7 @@ class Command(BaseCommand):
             raise CommandError(f"File not found: {path}")
 
         self.stdout.write(f"Loading workbook: {path}")
-        wb = openpyxl.load_workbook(path, data_only=True)
+        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
 
         if options.get("clear"):
             self._clear_data()
