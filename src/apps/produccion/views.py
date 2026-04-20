@@ -13,6 +13,7 @@ from .serializers import (
 class LoteViewSet(viewsets.ModelViewSet):
     serializer_class = LoteSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nombre', 'variedad']
     ordering_fields = ['nombre', 'num_arboles', 'created_at']

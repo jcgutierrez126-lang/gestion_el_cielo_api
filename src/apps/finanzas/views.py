@@ -14,6 +14,7 @@ class CuentaViewSet(viewsets.ModelViewSet):
     queryset = Cuenta.objects.all().order_by('nombre')
     serializer_class = CuentaSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nombre', 'tipo']
     ordering_fields = ['nombre', 'tipo', 'created_at']
@@ -141,14 +142,49 @@ class ResumenView(APIView):
     def get(self, request):
         from apps.produccion.models import VentaCafe, VentaBanano
         from apps.nomina.models import Empleado
+        from decimal import Decimal
 
-        cuentas_qs = Cuenta.objects.filter(status=True).order_by('nombre')
-        cuentas = [
-            {'nombre': c.nombre, 'tipo': c.tipo, 'saldo': str(c.saldo_inicial)}
-            for c in cuentas_qs
-        ]
-        saldo_total = sum(c.saldo_inicial for c in Cuenta.objects.filter(status=True))
+        # ── Per-account flows (bulk queries, one pass each) ──────────────────
+        def _agg(qs, group_field, value_field):
+            return {
+                row[group_field]: row['total']
+                for row in qs.values(group_field).annotate(total=Sum(value_field))
+                if row['total']
+            }
 
+        ing_map    = _agg(Ingreso.objects.all(),      'cuenta_destino_id', 'valor')
+        cafe_map   = _agg(VentaCafe.objects.all(),    'cuenta_destino_id', 'valor_neto')
+        banano_map = _agg(VentaBanano.objects.all(),  'cuenta_destino_id', 'valor_total')
+        egr_map    = _agg(Egreso.objects.all(),       'cuenta_id',         'valor')
+        trans_in   = _agg(Transaccion.objects.all(),  'cuenta_destino_id', 'valor')
+        trans_out  = _agg(Transaccion.objects.all(),  'cuenta_origen_id',  'valor')
+
+        D = Decimal
+        cuentas = []
+        saldo_total = D('0')
+
+        for c in Cuenta.objects.filter(status=True).order_by('nombre'):
+            cid = c.id
+            ingresos_c = D(str(ing_map.get(cid, 0)))
+            cafe_c     = D(str(cafe_map.get(cid, 0)))
+            banano_c   = D(str(banano_map.get(cid, 0)))
+            egresos_c  = D(str(egr_map.get(cid, 0)))
+            pagos_c    = D(str(trans_in.get(cid, 0))) - D(str(trans_out.get(cid, 0)))
+            saldo_c    = c.saldo_inicial + ingresos_c + cafe_c + banano_c - egresos_c + pagos_c
+
+            cuentas.append({
+                'nombre':   c.nombre,
+                'tipo':     c.tipo,
+                'saldo':    str(saldo_c),
+                'ingresos': str(ingresos_c),
+                'cafe':     str(cafe_c),
+                'banano':   str(banano_c),
+                'egresos':  str(egresos_c),
+                'pagos':    str(pagos_c),
+            })
+            saldo_total += saldo_c
+
+        # ── Global aggregates ─────────────────────────────────────────────────
         egresos_agg = Egreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
         ingresos_agg = Ingreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
         cafe_agg = VentaCafe.objects.aggregate(
@@ -158,9 +194,16 @@ class ResumenView(APIView):
             total_kilos=Sum('kilos'), total_valor=Sum('valor_total'), count=Count('id')
         )
 
+        # ── Egresos por categoría ─────────────────────────────────────────────
+        egresos_cat = list(
+            Egreso.objects.values('categoria')
+            .annotate(total=Sum('valor'), count=Count('id'))
+            .order_by('-total')
+        )
+
         return Response({
             'cuentas': cuentas,
-            'saldo_total': str(saldo_total or 0),
+            'saldo_total': str(saldo_total),
             'egresos': {
                 'total': str(egresos_agg['total'] or 0),
                 'count': egresos_agg['count'],
@@ -179,5 +222,9 @@ class ResumenView(APIView):
                 'total_valor': str(banano_agg['total_valor'] or 0),
                 'count': banano_agg['count'],
             },
+            'egresos_por_categoria': [
+                {'categoria': r['categoria'], 'total': str(r['total']), 'count': r['count']}
+                for r in egresos_cat
+            ],
             'empleados_activos': Empleado.objects.filter(activo=True).count(),
         })

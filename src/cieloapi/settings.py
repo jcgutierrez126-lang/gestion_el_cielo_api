@@ -57,14 +57,16 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'cieloapi.pagination.CieloPagination',
+    'PAGE_SIZE': 50,
     # Rate limiting
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/minute',      # Usuarios no autenticados
-        'user': '200/minute',     # Usuarios autenticados
+        'anon': '20/minute',
+        'user': '200/minute',
     },
 }
 
