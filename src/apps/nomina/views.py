@@ -66,7 +66,7 @@ class ControlSemanalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = ControlSemanal.objects.select_related(
-            'empleado', 'tipo_labor', 'tipo_cobro'
+            'empleado', 'tipo_labor', 'tipo_cobro', 'lote'
         ).all()
         p = self.request.query_params
 

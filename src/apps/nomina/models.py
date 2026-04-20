@@ -1,5 +1,6 @@
 from django.db import models
 from cieloapi.base_model import BaseModel
+from apps.produccion.models import Lote
 
 
 class TipoLabor(BaseModel):
@@ -79,7 +80,10 @@ class ControlSemanal(BaseModel):
         TipoCobro, on_delete=models.PROTECT,
         verbose_name="Tipo cobro"
     )
-    lote = models.CharField(max_length=100, blank=True, null=True, verbose_name="Lote")
+    lote = models.ForeignKey(
+        Lote, on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name="Lote"
+    )
     kilos = models.DecimalField(
         max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Kilos"
     )

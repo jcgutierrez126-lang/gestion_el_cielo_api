@@ -33,6 +33,7 @@ class ControlSemanalSerializer(serializers.ModelSerializer):
     empleado_nombre = serializers.CharField(source='empleado.nombre_completo', read_only=True)
     tipo_labor_nombre = serializers.CharField(source='tipo_labor.nombre', read_only=True)
     tipo_cobro_nombre = serializers.CharField(source='tipo_cobro.nombre', read_only=True)
+    lote_nombre = serializers.CharField(source='lote.nombre', read_only=True, default=None)
 
     class Meta:
         model = ControlSemanal
@@ -41,7 +42,8 @@ class ControlSemanalSerializer(serializers.ModelSerializer):
             'fecha_inicio', 'fecha_fin',
             'tipo_labor', 'tipo_labor_nombre',
             'tipo_cobro', 'tipo_cobro_nombre',
-            'lote', 'kilos', 'jornales', 'costo_unidad', 'valor',
+            'lote', 'lote_nombre',
+            'kilos', 'jornales', 'costo_unidad', 'valor',
             'observaciones', 'es_vale',
             'created_at', 'updated_at',
         ]
