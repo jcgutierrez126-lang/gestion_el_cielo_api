@@ -296,12 +296,12 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         created = 0
         for row in rows:
-            if not row[0]:
+            if not row or not row[0]:
                 continue
             nombre = _s(row[0])
             if not nombre:
                 continue
-            telefono = _s(row[1]) if row[1] else None
+            telefono = _s(row[1]) if len(row) > 1 and row[1] else None
             celular = _s(row[2]) if row[2] else None
             cedula = _s(row[3]) if row[3] else None
             direccion = _s(row[4]) if row[4] else None
@@ -326,7 +326,7 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         created = 0
         for row in rows:
-            if not row[0]:
+            if not row or not row[0]:
                 continue
             nombre = _s(row[0])
             cedula = str(int(row[2])) if row[2] and isinstance(row[2], (int, float)) else (_s(row[2]) or None)
@@ -357,7 +357,9 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         created = 0
         for row in rows:
-            nombre = _s(row[0]) if row[0] else ""
+            if not row or not row[0]:
+                continue
+            nombre = _s(row[0])
             if not nombre or nombre not in REAL_LOTE_NAMES:
                 continue
             # Use most recent tree count: col[5] = Palos agosto 17 2023
@@ -392,6 +394,8 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             texto = _s(row[1]) if len(row) > 1 else ""
             if not fecha or not texto:
@@ -408,11 +412,13 @@ class Command(BaseCommand):
         _prov_cache: dict[str, Proveedor | None] = {}
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            nombre = _s(row[1]) if row[1] else "Sin nombre"
-            valor = _dec(row[6])
+            nombre = _s(row[1]) if len(row) > 1 and row[1] else "Sin nombre"
+            valor = _dec(row[6]) if len(row) > 6 else None
             if valor is None:
                 continue
             cuenta_nombre = _s(row[7]) if row[7] else "Efectivo"
@@ -460,10 +466,12 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            descripcion = _s(row[1]) if row[1] else "Sin descripción"
+            descripcion = _s(row[1]) if len(row) > 1 and row[1] else "Sin descripción"
             valor = _dec(row[2])
             if valor is None:
                 continue
@@ -488,10 +496,12 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            origen_nombre = _s(row[1]) if row[1] else None
+            origen_nombre = _s(row[1]) if len(row) > 1 and row[1] else None
             destino_nombre = _s(row[2]) if row[2] else None
             valor = _dec(row[3])
             if valor is None or not destino_nombre:
@@ -528,13 +538,15 @@ class Command(BaseCommand):
         abonos_created = 0
 
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            valor = _dec(row[1])
+            valor = _dec(row[1]) if len(row) > 1 else None
             if valor is None:
                 continue
-            trabajador = _s(row[2]) if row[2] else None
+            trabajador = _s(row[2]) if len(row) > 2 and row[2] else None
             if not trabajador:
                 continue
 
@@ -585,12 +597,14 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            kilos = _dec(row[1])
-            valor_total = _dec(row[8])
-            valor_neto = _dec(row[11])
+            kilos = _dec(row[1]) if len(row) > 1 else None
+            valor_total = _dec(row[8]) if len(row) > 8 else None
+            valor_neto = _dec(row[11]) if len(row) > 11 else None
             if kilos is None or valor_total is None or valor_neto is None:
                 continue
             cargas = _dec(row[2], Decimal(0))
@@ -627,11 +641,13 @@ class Command(BaseCommand):
         rows = list(ws.iter_rows(values_only=True))[1:]
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            kilos = _dec(row[2])
-            valor_total = _dec(row[4])
+            kilos = _dec(row[2]) if len(row) > 2 else None
+            valor_total = _dec(row[4]) if len(row) > 4 else None
             if kilos is None or valor_total is None:
                 continue
             tipo = _map_tipo_platano(_s(row[1]))
@@ -660,6 +676,8 @@ class Command(BaseCommand):
         _lote_cache: dict[str, Lote | None] = {}
         objs = []
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             calidad_raw = _s(row[2]) if len(row) > 2 and row[2] else "buena"
             if not fecha:
@@ -694,10 +712,12 @@ class Command(BaseCommand):
         mezclas = 0
         ferts = 0
         for row in rows:
+            if not row:
+                continue
             fecha = _date(row[0]) if row[0] else None
             if not fecha:
                 continue
-            formula = _s(row[1]) if row[1] else "Sin fórmula"
+            formula = _s(row[1]) if len(row) > 1 and row[1] else "Sin fórmula"
             lote_nombre = _s(row[2]) if len(row) > 2 and row[2] else None
             lote = None
             if lote_nombre:
