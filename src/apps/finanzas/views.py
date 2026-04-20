@@ -1,5 +1,8 @@
 from rest_framework import viewsets, filters
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.db.models import Sum, Count
 from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
 from .serializers import (
     CuentaSerializer, ProveedorSerializer, EgresoSerializer,
@@ -130,3 +133,51 @@ class ObservacionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__lte=fecha_hasta)
 
         return qs.order_by('-fecha')
+
+
+class ResumenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.produccion.models import VentaCafe, VentaBanano
+        from apps.nomina.models import Empleado
+
+        cuentas_qs = Cuenta.objects.filter(status=True).order_by('nombre')
+        cuentas = [
+            {'nombre': c.nombre, 'tipo': c.tipo, 'saldo': str(c.saldo_inicial)}
+            for c in cuentas_qs
+        ]
+        saldo_total = sum(c.saldo_inicial for c in Cuenta.objects.filter(status=True))
+
+        egresos_agg = Egreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
+        ingresos_agg = Ingreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
+        cafe_agg = VentaCafe.objects.aggregate(
+            total_kilos=Sum('kilos'), total_valor=Sum('valor_neto'), count=Count('id')
+        )
+        banano_agg = VentaBanano.objects.aggregate(
+            total_kilos=Sum('kilos'), total_valor=Sum('valor_total'), count=Count('id')
+        )
+
+        return Response({
+            'cuentas': cuentas,
+            'saldo_total': str(saldo_total or 0),
+            'egresos': {
+                'total': str(egresos_agg['total'] or 0),
+                'count': egresos_agg['count'],
+            },
+            'ingresos': {
+                'total': str(ingresos_agg['total'] or 0),
+                'count': ingresos_agg['count'],
+            },
+            'ventas_cafe': {
+                'total_kilos': str(cafe_agg['total_kilos'] or 0),
+                'total_valor': str(cafe_agg['total_valor'] or 0),
+                'count': cafe_agg['count'],
+            },
+            'ventas_banano': {
+                'total_kilos': str(banano_agg['total_kilos'] or 0),
+                'total_valor': str(banano_agg['total_valor'] or 0),
+                'count': banano_agg['count'],
+            },
+            'empleados_activos': Empleado.objects.filter(activo=True).count(),
+        })

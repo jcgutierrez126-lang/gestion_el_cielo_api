@@ -1,7 +1,9 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (
     CuentaViewSet, ProveedorViewSet, EgresoViewSet,
     IngresoViewSet, TransaccionViewSet, ObservacionViewSet,
+    ResumenView,
 )
 
 router = DefaultRouter()
@@ -12,4 +14,6 @@ router.register('ingresos', IngresoViewSet, basename='ingresos')
 router.register('transacciones', TransaccionViewSet, basename='transacciones')
 router.register('observaciones', ObservacionViewSet, basename='observaciones')
 
-urlpatterns = router.urls
+urlpatterns = router.urls + [
+    path('resumen/', ResumenView.as_view(), name='finanzas-resumen'),
+]
