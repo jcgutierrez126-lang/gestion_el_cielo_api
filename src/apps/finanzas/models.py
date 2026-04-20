@@ -30,6 +30,7 @@ CATEGORIAS_EGRESO = [
     ('banano', 'Banano'),
     ('compra_finca', 'Compra Finca'),
     ('capacitaciones', 'Capacitaciones'),
+    ('venta_cafe', 'Venta Café'),
 ]
 
 
