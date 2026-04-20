@@ -25,7 +25,6 @@ DJANGO_APPS = [
 
 LOCAL_APPS = [
     'apps.usuarios',
-    'apps.integraciones',
     'apps.finanzas',
     'apps.produccion',
     'apps.nomina',
@@ -56,7 +55,6 @@ APPEND_SLASH = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'apps.integraciones.authentication.APIKeyAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     # Rate limiting
@@ -158,11 +156,6 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
 ]
 
-# --- SUPPLOS API SETTINGS ---
-SUPPLOS_API_URL = os.getenv("SUPLOS_API_URL", "https://apicoronaqas.suplos.com")
-SUPPLOS_EMAIL = os.getenv("SUPLOS_API_EMAIL", "")
-SUPPLOS_PASSWORD = os.getenv("SUPLOS_API_PASSWORD", "")
-
 # --- CACHE SETTINGS ---
 CACHES = {
     'default': {
@@ -175,22 +168,6 @@ CACHES = {
     }
 }
 
-
-# --- AZURE DOCUMENT INTELLIGENCE ---
-AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT", "")
-AZURE_DOCUMENT_INTELLIGENCE_KEY = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
-
-# --- AZURE OPENAI ---
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "")
-
-# Modelo estructurador (OCR / correos)
-AZURE_OPENAI_STRUCTURING_DEPLOYMENT = os.getenv("AZURE_OPENAI_STRUCTURING_DEPLOYMENT", "gpt-4.1-structuring-suplos")
-AZURE_OPENAI_STRUCTURING_API_VERSION = os.getenv("AZURE_OPENAI_STRUCTURING_API_VERSION", "2025-01-01-preview")
-
-# Modelo orquestador (agente principal)
-AZURE_OPENAI_ORCHESTRATOR_DEPLOYMENT = os.getenv("AZURE_OPENAI_ORCHESTRATOR_DEPLOYMENT", "gpt-5.2-chat-orchestrator-suplos")
-AZURE_OPENAI_ORCHESTRATOR_API_VERSION = os.getenv("AZURE_OPENAI_ORCHESTRATOR_API_VERSION", "2025-04-01-preview")
 
 # --- LOGGING JSON ESTRUCTURADO ---
 LOGGING = {
@@ -208,11 +185,6 @@ LOGGING = {
         },
     },
     'loggers': {
-        'apps.integraciones': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
         'apps.usuarios': {
             'handlers': ['console'],
             'level': 'WARNING',
