@@ -2,7 +2,8 @@ from rest_framework import viewsets, filters
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Avg
+from django.db.models.functions import TruncMonth
 from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
 from .serializers import (
     CuentaSerializer, ProveedorSerializer, EgresoSerializer,
@@ -236,4 +237,114 @@ class ResumenView(APIView):
                 for r in egresos_cat
             ],
             'empleados_activos': Empleado.objects.filter(activo=True).count(),
+        })
+
+
+class GraficasView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.produccion.models import VentaCafe, VentaBanano
+        from decimal import Decimal
+
+        anio = request.query_params.get('anio')
+
+        def _filter(qs, field='fecha'):
+            if anio:
+                qs = qs.filter(**{f'{field}__year': anio})
+            return qs
+
+        MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+        def _by_month(qs, date_field, value_field, label='total'):
+            rows = (
+                qs.annotate(mes=TruncMonth(date_field))
+                .values('mes')
+                .annotate(total=Sum(value_field))
+                .order_by('mes')
+            )
+            return [
+                {'mes': MESES[r['mes'].month - 1], 'mes_num': r['mes'].month, label: str(r['total'] or 0)}
+                for r in rows if r['mes']
+            ]
+
+        # Café por mes (kilos y valor_neto)
+        cafe_qs = _filter(VentaCafe.objects.all())
+        cafe_mensual = (
+            cafe_qs.annotate(mes=TruncMonth('fecha'))
+            .values('mes')
+            .annotate(kilos=Sum('kilos'), valor=Sum('valor_neto'))
+            .order_by('mes')
+        )
+        cafe_mensual_data = [
+            {
+                'mes': MESES[r['mes'].month - 1],
+                'mes_num': r['mes'].month,
+                'kilos': str(r['kilos'] or 0),
+                'valor': str(r['valor'] or 0),
+            }
+            for r in cafe_mensual if r['mes']
+        ]
+
+        # Banano por mes
+        banano_qs = _filter(VentaBanano.objects.all())
+        banano_mensual = (
+            banano_qs.annotate(mes=TruncMonth('fecha'))
+            .values('mes')
+            .annotate(kilos=Sum('kilos'), valor=Sum('valor_total'))
+            .order_by('mes')
+        )
+        banano_mensual_data = [
+            {
+                'mes': MESES[r['mes'].month - 1],
+                'mes_num': r['mes'].month,
+                'kilos': str(r['kilos'] or 0),
+                'valor': str(r['valor'] or 0),
+            }
+            for r in banano_mensual if r['mes']
+        ]
+
+        # Ingresos por mes
+        ing_mensual = _by_month(_filter(Ingreso.objects.all()), 'fecha', 'valor', 'valor')
+
+        # Egresos por mes
+        egr_mensual = _by_month(_filter(Egreso.objects.all()), 'fecha', 'valor', 'valor')
+
+        # Ventas café detalle por fecha (para gráfica de cargas y precio)
+        cafe_detalle = list(
+            cafe_qs
+            .exclude(tipo_cafe__in=['pasilla', 'corriente'])
+            .order_by('fecha')
+            .values('fecha', 'cargas', 'precio_kilo', 'tipo_cafe', 'kilos', 'valor_neto')
+        )
+        cafe_detalle_data = [
+            {
+                'fecha': str(r['fecha']),
+                'cargas': str(r['cargas'] or 0),
+                'precio_kilo': str(r['precio_kilo'] or 0),
+                'tipo_cafe': r['tipo_cafe'],
+                'kilos': str(r['kilos'] or 0),
+                'valor_neto': str(r['valor_neto'] or 0),
+            }
+            for r in cafe_detalle
+        ]
+
+        # Totales para pie chart de ingresos
+        D = Decimal
+        total_cafe = D(str(cafe_qs.aggregate(t=Sum('valor_neto'))['t'] or 0))
+        total_banano = D(str(banano_qs.aggregate(t=Sum('valor_total'))['t'] or 0))
+        total_ingresos = D(str(_filter(Ingreso.objects.all()).aggregate(t=Sum('valor'))['t'] or 0))
+
+        return Response({
+            'cafe_mensual': cafe_mensual_data,
+            'banano_mensual': banano_mensual_data,
+            'ingresos_mensual': ing_mensual,
+            'egresos_mensual': egr_mensual,
+            'cafe_detalle': cafe_detalle_data,
+            'totales_ingresos': {
+                'cafe': str(total_cafe),
+                'banano': str(total_banano),
+                'otros': str(total_ingresos),
+            },
         })

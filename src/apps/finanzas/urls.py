@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CuentaViewSet, ProveedorViewSet, EgresoViewSet,
     IngresoViewSet, TransaccionViewSet, ObservacionViewSet,
-    ResumenView,
+    ResumenView, GraficasView,
 )
 
 router = DefaultRouter()
@@ -16,4 +16,5 @@ router.register('observaciones', ObservacionViewSet, basename='observaciones')
 
 urlpatterns = router.urls + [
     path('resumen/', ResumenView.as_view(), name='finanzas-resumen'),
+    path('graficas/', GraficasView.as_view(), name='finanzas-graficas'),
 ]
