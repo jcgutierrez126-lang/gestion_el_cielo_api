@@ -2,9 +2,9 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
+from .models import Empleado, ControlSemanal, ControlDiario, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
 from .serializers import (
-    EmpleadoSerializer, ControlSemanalSerializer,
+    EmpleadoSerializer, ControlSemanalSerializer, ControlDiarioSerializer,
     PrestamoEmpleadoSerializer, PrestamoEmpleadoListSerializer,
     AbonoPrestamoSerializer, TipoLaborSerializer, TipoCobroSerializer,
 )
@@ -94,6 +94,35 @@ class ControlSemanalViewSet(viewsets.ModelViewSet):
             qs = qs.filter(lote__icontains=lote)
 
         return qs.order_by('-fecha_inicio')
+
+
+class ControlDiarioViewSet(viewsets.ModelViewSet):
+    serializer_class = ControlDiarioSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nombre', 'labor', 'lote', 'semana_ref']
+    ordering_fields = ['fecha', 'nombre', 'created_at']
+
+    def get_queryset(self):
+        qs = ControlDiario.objects.all()
+        p = self.request.query_params
+        if semana := p.get('semana_ref'):
+            qs = qs.filter(semana_ref__icontains=semana)
+        if fecha_desde := p.get('fecha_desde'):
+            qs = qs.filter(fecha__gte=fecha_desde)
+        if fecha_hasta := p.get('fecha_hasta'):
+            qs = qs.filter(fecha__lte=fecha_hasta)
+        if nombre := p.get('nombre'):
+            qs = qs.filter(nombre__icontains=nombre)
+        return qs
+
+    @action(detail=False, methods=['delete'], url_path='borrar-semana')
+    def borrar_semana(self, request):
+        semana_ref = request.query_params.get('semana_ref', '').strip()
+        if not semana_ref:
+            return Response({'error': 'semana_ref requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        count, _ = ControlDiario.objects.filter(semana_ref=semana_ref).delete()
+        return Response({'eliminados': count})
 
 
 class PrestamoEmpleadoViewSet(viewsets.ModelViewSet):

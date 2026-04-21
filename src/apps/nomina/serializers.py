@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
+from .models import Empleado, ControlSemanal, ControlDiario, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
 
 
 class TipoLaborSerializer(serializers.ModelSerializer):
@@ -48,6 +48,17 @@ class ControlSemanalSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+
+class ControlDiarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ControlDiario
+        fields = [
+            'id', 'semana_ref', 'fecha', 'dia', 'nombre',
+            'lote', 'labor', 'cantidad', 'tipo_cobro', 'valor',
+            'created_at',
+        ]
+        read_only_fields = ['created_at']
 
 
 class AbonoPrestamoSerializer(serializers.ModelSerializer):

@@ -142,6 +142,31 @@ class PrestamoEmpleado(BaseModel):
         self.save(update_fields=['saldo'])
 
 
+class ControlDiario(BaseModel):
+    semana_ref = models.CharField(max_length=150, blank=True, default='', verbose_name='Semana referencia')
+    fecha = models.DateField(db_index=True, verbose_name='Fecha')
+    dia = models.CharField(max_length=20, blank=True, default='', verbose_name='Día')
+    nombre = models.CharField(max_length=200, verbose_name='Nombre trabajador')
+    lote = models.CharField(max_length=100, blank=True, default='', verbose_name='Lote')
+    labor = models.CharField(max_length=150, verbose_name='Labor')
+    cantidad = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Cantidad/Kilos'
+    )
+    tipo_cobro = models.CharField(max_length=50, blank=True, default='', verbose_name='Tipo cobro')
+    valor = models.DecimalField(
+        max_digits=12, decimal_places=0, null=True, blank=True, verbose_name='Valor'
+    )
+
+    class Meta:
+        db_table = 'control_diario'
+        verbose_name = 'Control Diario'
+        verbose_name_plural = 'Control Diario'
+        ordering = ['-fecha', 'nombre']
+
+    def __str__(self):
+        return f"{self.nombre} | {self.fecha} ({self.dia}) | {self.labor}"
+
+
 class AbonoPrestamo(BaseModel):
     prestamo = models.ForeignKey(
         PrestamoEmpleado, on_delete=models.CASCADE,
