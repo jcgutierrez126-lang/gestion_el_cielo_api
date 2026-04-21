@@ -2,6 +2,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Sum, Count, Avg, Max, Min
 from .models import Empleado, ControlSemanal, ControlDiario, PrestamoEmpleado, AbonoPrestamo, TipoLabor, TipoCobro
 from .serializers import (
     EmpleadoSerializer, ControlSemanalSerializer, ControlDiarioSerializer,
@@ -94,6 +95,33 @@ class ControlSemanalViewSet(viewsets.ModelViewSet):
             qs = qs.filter(lote__icontains=lote)
 
         return qs.order_by('-fecha_inicio')
+
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        qs = self.get_queryset()
+        agg = qs.aggregate(
+            total_valor=Sum('valor'),
+            total_kilos=Sum('kilos'),
+            total_jornales=Sum('jornales'),
+            num_registros=Count('id'),
+            num_empleados=Count('empleado', distinct=True),
+            promedio_valor=Avg('valor'),
+        )
+        # Distribución por tipo_labor (top 5)
+        por_labor = (
+            qs.values('tipo_labor__nombre')
+            .annotate(total=Sum('valor'), registros=Count('id'))
+            .order_by('-total')[:6]
+        )
+        return Response({
+            'total_valor': str(agg['total_valor'] or 0),
+            'total_kilos': str(agg['total_kilos'] or 0),
+            'total_jornales': str(agg['total_jornales'] or 0),
+            'num_registros': agg['num_registros'] or 0,
+            'num_empleados': agg['num_empleados'] or 0,
+            'promedio_valor': str(agg['promedio_valor'] or 0),
+            'por_labor': list(por_labor),
+        })
 
 
 class ControlDiarioViewSet(viewsets.ModelViewSet):
