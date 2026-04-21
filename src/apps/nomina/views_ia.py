@@ -157,12 +157,12 @@ ESTRUCTURA de la planilla:
 
 INSTRUCCIONES:
 1. Crea UN REGISTRO por cada combinación trabajador-día que tenga labor registrada.
-2. Calcula la fecha exacta de cada día a partir del lunes de la semana (lunes+0, martes+1, etc.).
-3. Si el día tiene kilos → tipo_cobro = "kilos", cantidad = kilos del día.
-4. Si el día solo tiene labor sin kilos → tipo_cobro = "jornal", cantidad = null.
-5. Para valor por día de jornal: usa el valor_jornal del encabezado dividido entre los jornales del trabajador,
-   o simplemente asigna valor_jornal a cada día de jornal. Para kilos, usa kilos × precio_kilo si lo ves.
-   Si no puedes calcular el valor diario con certeza, usa null.
+2. Calcula la fecha exacta de cada día a partir del lunes de la semana (lunes=+0 días, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5).
+3. Si el día tiene kilos → tipo_cobro = "kilos", cantidad = kilos del día. valor = kilos × precio si está visible.
+4. Si el día solo tiene labor sin kilos → tipo_cobro = "jornal", cantidad = null, valor = valor_jornal del encabezado.
+   IMPORTANTE: Para días de jornal, SIEMPRE asigna valor = valor_jornal (el número del encabezado). No dejes valor en null.
+5. Si el trabajador es "Auxilio de Transporte" u otro concepto especial (nomina), tipo_cobro = "nomina", valor = el que aparece.
+6. Para el lote: lee el nombre/abreviatura del lote para ESE DÍA específico del trabajador. Si no hay lote visible para ese día, usa null.
 
 Devuelve exactamente este JSON:
 {
