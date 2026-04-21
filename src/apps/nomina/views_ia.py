@@ -133,38 +133,47 @@ Devuelve este JSON exacto:
 # ── Prompts planilla diaria (nuevo formato) ────────────────────────────────────
 
 SYSTEM_PROMPT_DIARIA = f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
-Tu única tarea es leer imágenes de planillas físicas diarias manuscritas y devolver un JSON estructurado.
+Tu única tarea es leer imágenes de planillas semanales manuscritas y devolver un JSON con UN REGISTRO POR TRABAJADOR POR DÍA.
 
 REGLAS ESTRICTAS:
 - Devuelve SOLO JSON válido, sin texto antes ni después, sin bloques de código.
-- Si un campo está en blanco o ilegible, usa null o cadena vacía "".
+- Si un campo está en blanco o ilegible, usa null.
 - Fechas en formato YYYY-MM-DD.
 - Valores numéricos sin separador de miles (ejemplo: 390000 no 390.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
-- Para lotes: usa estas abreviaturas de letra {LOTES_ABREV} o estos números {LOTES_FINCA}. Convierte al nombre completo.
+- Para lotes: usa estas abreviaturas {LOTES_ABREV} o números {LOTES_FINCA}. Convierte al nombre completo.
 - Para labores: usa estos códigos {CODIGOS_LABOR}. Convierte al nombre completo.
-- Para tipo_labor normaliza al valor más cercano de esta lista exacta:
-  recoleccion, guadana, abono, varios, banano, cosecha, siembra, embolsada,
-  deshojada, deschuponar, desbejucar, arriero, broca, control_plagas,
-  auxilio_labor, auxilio_transporte, permiso, nomina, contrato
-- Para tipo_cobro usa: kilos, jornal, contrato, nomina
-- Si en una fila no hay labor ni valor, omite esa fila.
+- Para tipo_cobro usa: kilos, jornal, contrato, nomina.
+- Omite los días donde el trabajador no tiene labor registrada.
 """
 
-USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla DIARIA de trabajadores de Finca El Cielo.
+USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
 
-La planilla tiene:
-- Encabezado superior con FECHA y DÍA (ej: "Fecha: 20/04/2026  Día: Lunes")
-- Tabla con columnas: Nombre | Lote | Labor | Cantidad | Tipo Cobro | Valor
-- Una fila por trabajador
+ESTRUCTURA de la planilla:
+- ENCABEZADO: número de semana y rango de fechas (ej: "Semana 8 del 16 al 22 de Febrero del 2026"), valor jornal diario.
+- TABLA: una fila por trabajador. Columnas por día (Lunes a Sábado): labor realizada, kilos si aplica, lote.
+  Al final: Valor Jornal (total semana) y Valor Total.
+- OBSERVACIONES al pie.
+
+INSTRUCCIONES:
+1. Crea UN REGISTRO por cada combinación trabajador-día que tenga labor registrada.
+2. Calcula la fecha exacta de cada día a partir del lunes de la semana (lunes+0, martes+1, etc.).
+3. Si el día tiene kilos → tipo_cobro = "kilos", cantidad = kilos del día.
+4. Si el día solo tiene labor sin kilos → tipo_cobro = "jornal", cantidad = null.
+5. Para valor por día de jornal: usa el valor_jornal del encabezado dividido entre los jornales del trabajador,
+   o simplemente asigna valor_jornal a cada día de jornal. Para kilos, usa kilos × precio_kilo si lo ves.
+   Si no puedes calcular el valor diario con certeza, usa null.
 
 Devuelve exactamente este JSON:
 {
-  "fecha": "YYYY-MM-DD extraída del encabezado o null",
-  "dia": "Lunes/Martes/Miércoles/Jueves/Viernes/Sábado o null",
+  "fecha_inicio": "YYYY-MM-DD del lunes de la semana",
+  "semana_ref": "texto del encabezado tal como aparece",
+  "valor_jornal": número_o_null,
   "registros": [
     {
-      "nombre": "nombre del trabajador",
+      "nombre": "nombre completo del trabajador",
+      "dia": "Lunes|Martes|Miércoles|Jueves|Viernes|Sábado",
+      "fecha": "YYYY-MM-DD de ese día específico",
       "lote": "nombre completo del lote o null",
       "labor": "nombre completo de la labor",
       "cantidad": número_o_null,
@@ -228,9 +237,13 @@ class LeerPlanillaDiariaView(APIView):
 
             datos = json.loads(raw)
 
-            # Calcular semana_ref automáticamente desde la fecha
-            fecha = datos.get('fecha') or ''
-            datos['semana_ref'] = semana_ref_desde_fecha(fecha)
+            # Soporta formato semanal (fecha_inicio) y diario (fecha)
+            fecha = datos.get('fecha_inicio') or datos.get('fecha') or ''
+            if not datos.get('semana_ref'):
+                datos['semana_ref'] = semana_ref_desde_fecha(fecha)
+            # Compat: asegurar campo 'fecha' para el frontend
+            if not datos.get('fecha') and fecha:
+                datos['fecha'] = fecha
 
             return Response({
                 'ok': True,
