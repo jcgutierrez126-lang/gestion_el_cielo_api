@@ -25,7 +25,6 @@ CATEGORIAS_EGRESO = [
     ('roya', 'Roya'),
     ('moto', 'Moto'),
     ('prestamo_empleados', 'Préstamo empleados'),
-    ('no_aplica', 'No aplica'),
     ('activos_fijos', 'Activos fijos'),
     ('banano', 'Banano'),
     ('compra_finca', 'Compra Finca'),
@@ -41,7 +40,6 @@ class Cuenta(BaseModel):
         ('prestamo', 'Préstamo'),
         ('agencia', 'Agencia / Cooperativa'),
         ('dividendos', 'Dividendos'),
-        ('vale', 'Vale'),
     ]
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
     tipo = models.CharField(max_length=20, choices=TIPOS, verbose_name="Tipo")

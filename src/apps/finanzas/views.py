@@ -69,6 +69,12 @@ class EgresoViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('-fecha')
 
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        agg = self.filter_queryset(self.get_queryset()).aggregate(total_valor=Sum('valor'))
+        response.data['total_valor'] = str(agg['total_valor'] or 0)
+        return response
+
 
 class IngresoViewSet(viewsets.ModelViewSet):
     serializer_class = IngresoSerializer
@@ -94,6 +100,12 @@ class IngresoViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('-fecha')
 
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        agg = self.filter_queryset(self.get_queryset()).aggregate(total_valor=Sum('valor'))
+        response.data['total_valor'] = str(agg['total_valor'] or 0)
+        return response
+
 
 class TransaccionViewSet(viewsets.ModelViewSet):
     serializer_class = TransaccionSerializer
@@ -114,6 +126,12 @@ class TransaccionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__lte=fecha_hasta)
 
         return qs.order_by('-fecha')
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        agg = self.filter_queryset(self.get_queryset()).aggregate(total_valor=Sum('valor'))
+        response.data['total_valor'] = str(agg['total_valor'] or 0)
+        return response
 
 
 class ObservacionViewSet(viewsets.ModelViewSet):

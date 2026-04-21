@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import logging
+from datetime import date, timedelta
 
 import anthropic
 from rest_framework.views import APIView
@@ -14,8 +15,12 @@ logger = logging.getLogger(__name__)
 
 TIPOS_LABOR_VALIDOS = [
     'recoleccion', 'guadana', 'abono', 'varios', 'banano',
-    'cosecha', 'siembra', 'embolsada', 'auxilio_labor',
-    'auxilio_transporte', 'permiso', 'nomina', 'contrato',
+    'cosecha', 'siembra', 'siembra_banano', 'siembra_cafe', 'embolsada',
+    'deshojada', 'deschuponar', 'desbejucar', 'arriero', 'broca',
+    'control_plagas', 'platear', 'encalar', 'herbicida', 'machete',
+    'beneficio', 'mantenimiento', 'transporte', 'seleccion_cafe',
+    'arreglo_banano', 'incapacidad',
+    'auxilio_labor', 'auxilio_transporte', 'permiso', 'nomina', 'contrato',
 ]
 
 LOTES_FINCA = {
@@ -26,11 +31,45 @@ LOTES_FINCA = {
     "13": "El Llano", "14": "Destechada",
 }
 
-CODIGOS_LABOR = {
-    "R": "recoleccion", "G": "guadana", "A": "abono", "B": "banano",
-    "E": "embolsada", "S": "siembra", "C": "cosecha", "V": "varios",
-    "CT": "contrato", "P": "permiso", "N": "nomina",
+LOTES_ABREV = {
+    "M": "La Milagrosa", "T": "El Tanque", "C": "La Cruz",
+    "SJ": "San José", "N": "El Niño", "SCH": "San Charbel",
+    "CP": "La Ceja Palos", "CZ": "La Ceja Zocas", "H": "Huerta",
+    "HC": "Hoyo Caliente", "GU": "Guaduas", "BO": "La Bola",
+    "LL": "El Llano", "DT": "Destechada",
 }
+
+CODIGOS_LABOR = {
+    "R": "recoleccion", "G": "guadana", "A": "abono",
+    "B": "banano", "E": "embolsada", "S": "siembra",
+    "C": "cosecha", "V": "varios", "CT": "contrato",
+    "P": "permiso", "N": "nomina", "D": "deshojada",
+    "DC": "deschuponar", "DB": "desbejucar",
+    "AL": "auxilio_labor", "AT": "auxilio_transporte",
+}
+
+MESES_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+
+def semana_ref_desde_fecha(fecha_str: str) -> str:
+    """Genera el texto de referencia de semana a partir de una fecha ISO."""
+    try:
+        d = date.fromisoformat(fecha_str)
+    except (ValueError, TypeError):
+        return fecha_str or ""
+    lunes = d - timedelta(days=d.weekday())
+    sabado = lunes + timedelta(days=5)
+    mes = MESES_ES[lunes.month - 1]
+    if lunes.month == sabado.month:
+        return f"Semana del {lunes.day} al {sabado.day} de {mes} de {lunes.year}"
+    mes2 = MESES_ES[sabado.month - 1]
+    return f"Semana del {lunes.day} de {mes} al {sabado.day} de {mes2} de {lunes.year}"
+
+
+# ── Prompts planilla semanal (formato antiguo, para compatibilidad) ────────────
 
 SYSTEM_PROMPT = f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
 Tu única tarea es leer imágenes de planillas manuscritas y devolver un JSON estructurado.
@@ -91,45 +130,46 @@ Devuelve este JSON exacto:
 """
 
 
-SYSTEM_PROMPT_DIARIA = """Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
-Tu única tarea es leer imágenes de planillas semanales físicas manuscritas y extraer TODOS los registros diarios de cada trabajador.
+# ── Prompts planilla diaria (nuevo formato) ────────────────────────────────────
+
+SYSTEM_PROMPT_DIARIA = f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
+Tu única tarea es leer imágenes de planillas físicas diarias manuscritas y devolver un JSON estructurado.
 
 REGLAS ESTRICTAS:
 - Devuelve SOLO JSON válido, sin texto antes ni después, sin bloques de código.
-- Si un campo está en blanco o ilegible usa null o cadena vacía "".
-- Extrae UN registro por trabajador por día trabajado. Si un día está vacío, omítelo.
-- Las fechas en formato YYYY-MM-DD.
-- Los valores numéricos sin separador de miles (ejemplo: 390000 no 390.000).
-- El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes, Sábado o Domingo.
-- Intenta leer nombres, labores y lotes aunque estén abreviados o mal escritos.
+- Si un campo está en blanco o ilegible, usa null o cadena vacía "".
+- Fechas en formato YYYY-MM-DD.
+- Valores numéricos sin separador de miles (ejemplo: 390000 no 390.000).
+- El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
+- Para lotes: usa estas abreviaturas de letra {LOTES_ABREV} o estos números {LOTES_FINCA}. Convierte al nombre completo.
+- Para labores: usa estos códigos {CODIGOS_LABOR}. Convierte al nombre completo.
+- Para tipo_labor normaliza al valor más cercano de esta lista exacta:
+  recoleccion, guadana, abono, varios, banano, cosecha, siembra, embolsada,
+  deshojada, deschuponar, desbejucar, arriero, broca, control_plagas,
+  auxilio_labor, auxilio_transporte, permiso, nomina, contrato
+- Para tipo_cobro usa: kilos, jornal, contrato, nomina
+- Si en una fila no hay labor ni valor, omite esa fila.
 """
 
-USER_PROMPT_DIARIA = """Extrae todos los registros diarios de esta planilla semanal de trabajadores de Finca El Cielo.
+USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla DIARIA de trabajadores de Finca El Cielo.
 
 La planilla tiene:
-- Encabezado con el número y rango de fechas de la semana (ej: "Semana 8 del 16 al 22 de Febrero del 2026")
-- Tabla con trabajadores en filas y días de la semana (Lunes a Sábado) en columnas
-- Cada celda tiene: labor realizada, kilos/cantidad, lote donde trabajó
-- Columna final: valor total semanal por trabajador
-- Sección OBSERVACIONES al final
-
-Genera un registro por cada trabajador por cada día que haya trabajado.
-Si en un día el trabajador hizo varias labores distintas (varias filas en su celda), crea un registro por cada labor.
+- Encabezado superior con FECHA y DÍA (ej: "Fecha: 20/04/2026  Día: Lunes")
+- Tabla con columnas: Nombre | Lote | Labor | Cantidad | Tipo Cobro | Valor
+- Una fila por trabajador
 
 Devuelve exactamente este JSON:
 {
-  "semana_ref": "texto completo del encabezado de la semana",
-  "fecha_inicio": "YYYY-MM-DD del lunes de la semana",
+  "fecha": "YYYY-MM-DD extraída del encabezado o null",
+  "dia": "Lunes/Martes/Miércoles/Jueves/Viernes/Sábado o null",
   "registros": [
     {
-      "nombre": "nombre completo del trabajador",
-      "dia": "Lunes",
-      "fecha": "YYYY-MM-DD fecha específica de ese día",
-      "labor": "descripción de la labor realizada",
-      "lote": "nombre o número del lote, vacío si no aplica",
-      "cantidad": numero_kilos_u_otra_cantidad_o_null,
-      "tipo_cobro": "jornal o kilos o contrato o nomina",
-      "valor": valor_numerico_o_null
+      "nombre": "nombre del trabajador",
+      "lote": "nombre completo del lote o null",
+      "labor": "nombre completo de la labor",
+      "cantidad": número_o_null,
+      "tipo_cobro": "jornal | kilos | contrato | nomina",
+      "valor": número_o_null
     }
   ],
   "observaciones": "texto de observaciones o null"
@@ -161,7 +201,7 @@ class LeerPlanillaDiariaView(APIView):
             client = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
                 model='claude-sonnet-4-6',
-                max_tokens=8192,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT_DIARIA,
                 messages=[
                     {
@@ -187,6 +227,10 @@ class LeerPlanillaDiariaView(APIView):
                 raw = raw.rsplit('```', 1)[0]
 
             datos = json.loads(raw)
+
+            # Calcular semana_ref automáticamente desde la fecha
+            fecha = datos.get('fecha') or ''
+            datos['semana_ref'] = semana_ref_desde_fecha(fecha)
 
             return Response({
                 'ok': True,
@@ -250,14 +294,12 @@ class LeerPlanillaView(APIView):
 
             raw = message.content[0].text.strip()
 
-            # Limpiar posibles bloques de código
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[1]
                 raw = raw.rsplit('```', 1)[0]
 
             datos = json.loads(raw)
 
-            # Normalizar tipos de labor
             for r in datos.get('registros', []):
                 tl = (r.get('tipo_labor') or '').lower().strip()
                 if tl not in TIPOS_LABOR_VALIDOS:

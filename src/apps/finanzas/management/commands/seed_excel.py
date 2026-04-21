@@ -62,7 +62,7 @@ def _norm(s: str) -> str:
 # ─────────────────────── choice mappers ─────────────────────────────────────
 
 CATEGORIA_MAP = {
-    "viaticos": "viaticos", "viaticos": "viaticos",
+    "viaticos": "viaticos",
     "varios": "varios",
     "fertilizantes": "fertilizantes",
     "herbicidas": "herbicidas",
@@ -77,14 +77,14 @@ CATEGORIA_MAP = {
     "guadana": "guadana", "guadaña": "guadana",
     "construcciones": "construcciones",
     "impuestos": "impuestos",
-    "animales": "animales",
+    "animales": "animales", "terneros": "animales",
     "siembra": "siembra",
     "herramientas": "herramientas",
     "broca": "broca",
     "roya": "roya",
     "moto": "moto",
     "prestamo empleados": "prestamo_empleados",
-    "no aplica": "no_aplica",
+    "no aplica": "varios",   # Pago Vale histórico — se convierte a Transaccion, resto va a varios
     "activos fijos": "activos_fijos",
     "banano": "banano",
     "compra finca": "compra_finca",
@@ -167,7 +167,7 @@ _CUENTA_TIPOS = {
     "prestamo": "prestamo", "préstamo": "prestamo",
     "agencia": "agencia", "cooperativa": "agencia",
     "dividendo": "dividendos",
-    "vale": "vale",
+    # "vale" ya no existe como tipo — los egresos del vale van a Agencia
 }
 
 
@@ -235,7 +235,8 @@ class Command(BaseCommand):
             self._seed_empleados(wb)
             self._seed_lotes(wb)
             self._seed_observaciones(wb)
-            self._seed_egresos(wb)
+            self._seed_egresos_historicos(wb)   # hoja "Egresos" 2022-2024
+            self._seed_egresos(wb)              # hoja "Egresos 2025"
             self._seed_ingresos(wb)
             self._seed_transacciones(wb)
             self._seed_prestamos(wb)
@@ -278,15 +279,18 @@ class Command(BaseCommand):
             ("Préstamo Juan Camilo", "prestamo"),
             ("Préstamo Miriam", "prestamo"),
             ("Dividendos", "dividendos"),
-            ("Vale", "vale"),
-            ("No aplica", "efectivo"),
         ]
         for nombre, tipo in base:
-            obj, created = Cuenta.objects.get_or_create(
+            obj, _ = Cuenta.objects.get_or_create(
                 nombre=nombre,
                 defaults={"tipo": tipo, "saldo_inicial": 0},
             )
             _cuenta_cache[nombre] = obj
+        # Alias legacy: "Vale" → Agencia (egresos misceláneos que salían del vale)
+        agencia = _cuenta_cache.get("Agencia") or Cuenta.objects.filter(tipo="agencia").first()
+        if agencia:
+            _cuenta_cache["Vale"] = agencia
+            _cuenta_cache["vale"] = agencia
         self.stdout.write(f"  Cuentas base: {len(base)}")
 
     # ── proveedores ───────────────────────────────────────────────────────────
@@ -404,30 +408,133 @@ class Command(BaseCommand):
         Observacion.objects.bulk_create(objs, ignore_conflicts=True)
         self.stdout.write(f"  Observaciones: {len(objs)}")
 
-    # ── egresos ───────────────────────────────────────────────────────────────
+    # ── helpers de egresos ────────────────────────────────────────────────────
+
+    def _es_pago_vale(self, nombre: str) -> bool:
+        return _norm(nombre) in ("pago vale", "pagovale", "pago de vale", "cobro vale")
+
+    def _cuenta_para_egreso(self, cuenta_nombre: str) -> Cuenta:
+        """Vale → Agencia, cualquier otro → la cuenta real."""
+        if _norm(cuenta_nombre) in ("vale",):
+            return _get_cuenta("Agencia")
+        return _get_cuenta(cuenta_nombre) or _get_cuenta("Efectivo")
+
+    def _build_egreso(self, fecha, nombre, desc, cant, unid, valor, cuenta_nombre,
+                      cat_raw, prov, nit, fact_a, abono, restante, estado_raw):
+        cuenta = self._cuenta_para_egreso(cuenta_nombre)
+        estado = "pagada" if (estado_raw or "").lower() in ("", "pagada") else (
+            "pendiente" if "pendiente" in (estado_raw or "").lower() else "pagada"
+        )
+        return Egreso(
+            fecha=fecha, nombre=nombre, descripcion=desc or None,
+            cantidad=cant, unidad=unid or None, valor=valor,
+            cuenta=cuenta, categoria=_map_categoria(cat_raw or "varios"),
+            proveedor=prov,
+            nit_proveedor_destino=nit or None,
+            facturado_a=fact_a or None,
+            abono_deuda=abono or Decimal(0),
+            restante=restante or Decimal(0),
+            estado=estado,
+        )
+
+    def _build_transaccion_vale(self, fecha, valor, obs=""):
+        """Crea una Transacción Bancolombia Natalia → Agencia para un Pago Vale."""
+        bancolombia = _get_cuenta("Bancolombia Natalia")
+        agencia = _get_cuenta("Agencia")
+        return Transaccion(
+            fecha=fecha,
+            cuenta_origen=bancolombia,
+            cuenta_destino=agencia,
+            valor=valor,
+            observaciones=f"Pago Vale histórico{' — ' + obs if obs else ''}",
+        )
+
+    # ── egresos históricos (hoja "Egresos", 2022-2024) ───────────────────────
+    # Columnas: ID(0) FECHA(1) NOMBRE(2) DESC(3) CANT(4) UNID(5) VALOR(6)
+    #           CUENTA(7) CATEGORIA(8) PROV(9) NIT(10) FACT(11) ABONO(12)
+    #           RESTANTE(13) ESTADO(14)
+
+    def _seed_egresos_historicos(self, wb):
+        if "Egresos" not in wb.sheetnames:
+            self.stdout.write("  Hoja 'Egresos' no encontrada, omitiendo.")
+            return
+        ws = wb["Egresos"]
+        rows = list(ws.iter_rows(values_only=True))[1:]
+        _prov_cache: dict[str, Proveedor | None] = {}
+        egresos, transacciones = [], []
+        vale_count = 0
+
+        for row in rows:
+            if not row or not row[1]:
+                continue
+            fecha = _date(row[1])
+            if not fecha:
+                continue
+            nombre = _s(row[2]) if row[2] else "Sin nombre"
+            valor = _dec(row[6])
+            if valor is None:
+                continue
+
+            if self._es_pago_vale(nombre):
+                transacciones.append(self._build_transaccion_vale(fecha, valor, _s(row[3])))
+                vale_count += 1
+                continue
+
+            prov_nombre = _s(row[9]) if len(row) > 9 and row[9] else None
+            proveedor = None
+            if prov_nombre:
+                if prov_nombre not in _prov_cache:
+                    _prov_cache[prov_nombre] = Proveedor.objects.filter(nombre=prov_nombre).first()
+                proveedor = _prov_cache[prov_nombre]
+
+            egresos.append(self._build_egreso(
+                fecha=fecha, nombre=nombre,
+                desc=_s(row[3]) if row[3] else None,
+                cant=_dec(row[4]), unid=_s(row[5]) if row[5] else None,
+                valor=valor,
+                cuenta_nombre=_s(row[7]) if row[7] else "Efectivo",
+                cat_raw=_s(row[8]) if row[8] else "varios",
+                prov=proveedor,
+                nit=_s(row[10]) if len(row) > 10 and row[10] else None,
+                fact_a=_s(row[11]) if len(row) > 11 and row[11] else None,
+                abono=_dec(row[12]) if len(row) > 12 else None,
+                restante=_dec(row[13]) if len(row) > 13 else None,
+                estado_raw=_s(row[14]) if len(row) > 14 and row[14] else "pagada",
+            ))
+
+        Egreso.objects.bulk_create(egresos, batch_size=500, ignore_conflicts=True)
+        Transaccion.objects.bulk_create(transacciones, batch_size=300, ignore_conflicts=True)
+        self.stdout.write(
+            f"  Egresos históricos (2022-2024): {len(egresos)} egresos + "
+            f"{vale_count} Pago Vale → Transacciones"
+        )
+
+    # ── egresos 2025 (hoja "Egresos 2025") ───────────────────────────────────
+    # Columnas: FECHA(0) NOMBRE(1) DESC(2) CATEGORIA(3) CANT(4) UNID(5) VALOR(6)
+    #           CUENTA(7) PROV(8) NIT(9) FACT(10) ABONO(11) RESTANTE(12) ESTADO(13)
 
     def _seed_egresos(self, wb):
         ws = wb["Egresos 2025"]
         rows = list(ws.iter_rows(values_only=True))[1:]
         _prov_cache: dict[str, Proveedor | None] = {}
-        objs = []
+        egresos, transacciones = [], []
+        vale_count = 0
+
         for row in rows:
-            if not row:
+            if not row or not row[0]:
                 continue
-            fecha = _date(row[0]) if row[0] else None
+            fecha = _date(row[0])
             if not fecha:
                 continue
-            nombre = _s(row[1]) if len(row) > 1 and row[1] else "Sin nombre"
+            nombre = _s(row[1]) if row[1] else "Sin nombre"
             valor = _dec(row[6]) if len(row) > 6 else None
             if valor is None:
                 continue
-            cuenta_nombre = _s(row[7]) if row[7] else "Efectivo"
-            cuenta = _get_cuenta(cuenta_nombre)
-            if cuenta is None:
-                cuenta = _get_cuenta("Efectivo")
 
-            cat_raw = _s(row[3]) if row[3] else "varios"
-            categoria = _map_categoria(cat_raw)
+            if self._es_pago_vale(nombre):
+                transacciones.append(self._build_transaccion_vale(fecha, valor, _s(row[2])))
+                vale_count += 1
+                continue
 
             prov_nombre = _s(row[8]) if len(row) > 8 and row[8] else None
             proveedor = None
@@ -436,28 +543,27 @@ class Command(BaseCommand):
                     _prov_cache[prov_nombre] = Proveedor.objects.filter(nombre=prov_nombre).first()
                 proveedor = _prov_cache[prov_nombre]
 
-            estado_raw = _s(row[13]).lower() if len(row) > 13 and row[13] else "pagada"
-            estado = "pagada" if estado_raw in ("", "pagada") else ("pendiente" if "pendiente" in estado_raw else "pagada")
-
-            objs.append(Egreso(
-                fecha=fecha,
-                nombre=nombre,
-                descripcion=_s(row[2]) or None,
-                cantidad=_dec(row[4]),
-                unidad=_s(row[5]) or None,
+            egresos.append(self._build_egreso(
+                fecha=fecha, nombre=nombre,
+                desc=_s(row[2]) if row[2] else None,
+                cant=_dec(row[4]), unid=_s(row[5]) if len(row) > 5 and row[5] else None,
                 valor=valor,
-                cuenta=cuenta,
-                categoria=categoria,
-                proveedor=proveedor,
-                nit_proveedor_destino=_s(row[9]) or None if len(row) > 9 else None,
-                facturado_a=_s(row[10]) or None if len(row) > 10 else None,
-                abono_deuda=_dec(row[11], Decimal(0)) if len(row) > 11 else Decimal(0),
-                restante=_dec(row[12], Decimal(0)) if len(row) > 12 else Decimal(0),
-                estado=estado,
+                cuenta_nombre=_s(row[7]) if row[7] else "Efectivo",
+                cat_raw=_s(row[3]) if row[3] else "varios",
+                prov=proveedor,
+                nit=_s(row[9]) if len(row) > 9 and row[9] else None,
+                fact_a=_s(row[10]) if len(row) > 10 and row[10] else None,
+                abono=_dec(row[11]) if len(row) > 11 else None,
+                restante=_dec(row[12]) if len(row) > 12 else None,
+                estado_raw=_s(row[13]) if len(row) > 13 and row[13] else "pagada",
             ))
 
-        Egreso.objects.bulk_create(objs, batch_size=500, ignore_conflicts=True)
-        self.stdout.write(f"  Egresos: {len(objs)}")
+        Egreso.objects.bulk_create(egresos, batch_size=500, ignore_conflicts=True)
+        Transaccion.objects.bulk_create(transacciones, batch_size=300, ignore_conflicts=True)
+        self.stdout.write(
+            f"  Egresos 2025: {len(egresos)} egresos + "
+            f"{vale_count} Pago Vale → Transacciones"
+        )
 
     # ── ingresos ──────────────────────────────────────────────────────────────
 
