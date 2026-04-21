@@ -152,6 +152,26 @@ class ControlDiarioViewSet(viewsets.ModelViewSet):
         count, _ = ControlDiario.objects.filter(semana_ref=semana_ref).delete()
         return Response({'eliminados': count})
 
+    @action(detail=False, methods=['get'], url_path='semanas')
+    def semanas(self, request):
+        data = (
+            ControlDiario.objects
+            .exclude(semana_ref='')
+            .values('semana_ref')
+            .annotate(fecha_min=Min('fecha'))
+            .order_by('-fecha_min')
+        )
+        return Response(list(data))
+
+    @action(detail=False, methods=['get'], url_path='por-semana')
+    def por_semana(self, request):
+        semana_ref = request.query_params.get('semana_ref', '').strip()
+        if not semana_ref:
+            return Response({'error': 'semana_ref requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        qs = ControlDiario.objects.filter(semana_ref=semana_ref).order_by('nombre', 'fecha')
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
 
 class PrestamoEmpleadoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
