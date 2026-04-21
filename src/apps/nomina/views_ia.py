@@ -142,9 +142,11 @@ REGLAS ESTRICTAS:
 - Valores numéricos sin separador de miles (ejemplo: 390000 no 390.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
 - Para lotes: usa estas abreviaturas {LOTES_ABREV} o números {LOTES_FINCA}. Convierte al nombre completo.
+  Si el lote está ilegible, en blanco o no aplica (ej: auxilio, nomina), usa null. NUNCA uses "Lote" como valor.
 - Para labores: usa estos códigos {CODIGOS_LABOR}. Convierte al nombre completo.
 - Para tipo_cobro usa: kilos, jornal, contrato, nomina.
 - Omite los días donde el trabajador no tiene labor registrada.
+- Si ves en observaciones "Gastos varios" con montos (ej: neumático, parchada), inclúyelos en el campo "observaciones" pero NO crees registros de trabajador para ellos.
 """
 
 USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
@@ -161,8 +163,9 @@ INSTRUCCIONES:
 3. Si el día tiene kilos → tipo_cobro = "kilos", cantidad = kilos del día. valor = kilos × precio si está visible.
 4. Si el día solo tiene labor sin kilos → tipo_cobro = "jornal", cantidad = null, valor = valor_jornal del encabezado.
    IMPORTANTE: Para días de jornal, SIEMPRE asigna valor = valor_jornal (el número del encabezado). No dejes valor en null.
-5. Si el trabajador es "Auxilio de Transporte" u otro concepto especial (nomina), tipo_cobro = "nomina", valor = el que aparece.
-6. Para el lote: lee el nombre/abreviatura del lote para ESE DÍA específico del trabajador. Si no hay lote visible para ese día, usa null.
+5. Si el trabajador es "Auxilio de Transporte" u otro concepto especial (nomina/vale), tipo_cobro = "nomina", lote = null, valor = el que aparece.
+6. Para el lote: lee el nombre/abreviatura del lote para ESE DÍA específico del trabajador. Si no hay lote visible, si está ilegible, o si el concepto no aplica lote → usa null. NUNCA escribas la palabra "Lote" como valor del campo lote.
+7. En "observaciones" incluye: texto de observaciones, gastos varios (neumático, parchada, etc.) y el "Total vale semana" si aparece.
 
 Devuelve exactamente este JSON:
 {
