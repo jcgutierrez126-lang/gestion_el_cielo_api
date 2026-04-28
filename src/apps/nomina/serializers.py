@@ -5,14 +5,14 @@ from .models import Empleado, ControlSemanal, ControlDiario, PrestamoEmpleado, A
 class TipoLaborSerializer(serializers.ModelSerializer):
     class Meta:
         model = TipoLabor
-        fields = ['id', 'nombre', 'activo', 'created_at', 'updated_at']
+        fields = ['id', 'abreviatura', 'nombre', 'activo', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 
 class TipoCobroSerializer(serializers.ModelSerializer):
     class Meta:
         model = TipoCobro
-        fields = ['id', 'nombre', 'activo', 'created_at', 'updated_at']
+        fields = ['id', 'abreviatura', 'nombre', 'activo', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 
@@ -32,17 +32,20 @@ class EmpleadoSerializer(serializers.ModelSerializer):
 class ControlSemanalSerializer(serializers.ModelSerializer):
     empleado_nombre = serializers.CharField(source='empleado.nombre_completo', read_only=True)
     tipo_labor_nombre = serializers.CharField(source='tipo_labor.nombre', read_only=True)
+    tipo_labor_abreviatura = serializers.CharField(source='tipo_labor.abreviatura', read_only=True, default=None)
     tipo_cobro_nombre = serializers.CharField(source='tipo_cobro.nombre', read_only=True)
+    tipo_cobro_abreviatura = serializers.CharField(source='tipo_cobro.abreviatura', read_only=True, default=None)
     lote_nombre = serializers.CharField(source='lote.nombre', read_only=True, default=None)
+    lote_abreviatura = serializers.CharField(source='lote.abreviatura', read_only=True, default=None)
 
     class Meta:
         model = ControlSemanal
         fields = [
             'id', 'empleado', 'empleado_nombre',
             'fecha_inicio', 'fecha_fin',
-            'tipo_labor', 'tipo_labor_nombre',
-            'tipo_cobro', 'tipo_cobro_nombre',
-            'lote', 'lote_nombre',
+            'tipo_labor', 'tipo_labor_nombre', 'tipo_labor_abreviatura',
+            'tipo_cobro', 'tipo_cobro_nombre', 'tipo_cobro_abreviatura',
+            'lote', 'lote_nombre', 'lote_abreviatura',
             'kilos', 'jornales', 'costo_unidad', 'valor',
             'observaciones', 'es_vale',
             'created_at', 'updated_at',

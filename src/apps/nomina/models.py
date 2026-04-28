@@ -4,6 +4,7 @@ from apps.produccion.models import Lote
 
 
 class TipoLabor(BaseModel):
+    abreviatura = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name="Abreviatura")
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
@@ -14,10 +15,11 @@ class TipoLabor(BaseModel):
         verbose_name_plural = "Tipos de labor"
 
     def __str__(self):
-        return self.nombre
+        return f"{self.abreviatura} — {self.nombre}" if self.abreviatura else self.nombre
 
 
 class TipoCobro(BaseModel):
+    abreviatura = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name="Abreviatura")
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
@@ -28,7 +30,7 @@ class TipoCobro(BaseModel):
         verbose_name_plural = "Tipos de cobro"
 
     def __str__(self):
-        return self.nombre
+        return f"{self.abreviatura} — {self.nombre}" if self.abreviatura else self.nombre
 
 
 class Empleado(BaseModel):
