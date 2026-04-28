@@ -3,6 +3,7 @@ import json
 import os
 import logging
 from datetime import date, timedelta
+from io import BytesIO
 
 import anthropic
 from rest_framework.views import APIView
@@ -262,6 +263,124 @@ class LeerPlanillaDiariaView(APIView):
             logger.error('Error API Anthropic: %s', e)
             return Response({'error': 'Error al llamar a la API de Claude.', 'detalle': str(e)},
                             status=status.HTTP_502_BAD_GATEWAY)
+
+
+class LeerPlanillaSemanalExcelView(APIView):
+    """Parsea el Excel de planilla semanal (tab Labores) y devuelve registros para revisión."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    # Columnas 0-indexed por día: (lote, labor, cob, cant)
+    _DIA_COLS = [
+        (1, 2, 3, 4),      # Lunes:     B C D E
+        (5, 6, 7, 8),      # Martes:    F G H I
+        (9, 10, 11, 12),   # Miércoles: J K L M
+        (13, 14, 15, 16),  # Jueves:    N O P Q
+        (17, 18, 19, 20),  # Viernes:   R S T U
+        (21, 22, 23, 24),  # Sábado:    V W X Y
+    ]
+    _DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    _COL_MEDIO_DIA = 25   # Z  — "X" = sábado medio día
+    _COL_PRECIO    = 27   # AB — $ Jornal / $ Kilo
+    _COL_TIPO      = 28   # AC — K=kilos, C=contrato, vacío=jornal
+
+    @staticmethod
+    def _cel(row, idx):
+        """Extrae celda como string limpio, devuelve '' si vacía."""
+        if idx < len(row) and row[idx] is not None:
+            v = str(row[idx]).strip()
+            return v if v.lower() not in ('none', 'nan') else ''
+        return ''
+
+    @staticmethod
+    def _num(s):
+        """Convierte string a float; devuelve None si no parseable."""
+        try:
+            return float(s.replace(',', '.')) if s else None
+        except (ValueError, AttributeError):
+            return None
+
+    def post(self, request):
+        archivo = request.FILES.get('archivo')
+        if not archivo:
+            return Response({'error': 'Se requiere el campo "archivo".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        fecha_inicio_str = request.data.get('fecha_inicio', '')
+        try:
+            fecha_lunes = date.fromisoformat(fecha_inicio_str)
+        except (ValueError, TypeError):
+            hoy = date.today()
+            fecha_lunes = hoy - timedelta(days=hoy.weekday())
+
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(filename=BytesIO(archivo.read()), data_only=True)
+            ws = wb['Labores']
+        except Exception as e:
+            return Response({'error': f'No se pudo leer el archivo: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        registros = []
+
+        for row in ws.iter_rows(min_row=6, max_row=25, values_only=True):
+            nombre = self._cel(row, 0)
+            if not nombre:
+                continue
+
+            tipo_raw = self._cel(row, self._COL_TIPO).upper()
+            if tipo_raw == 'K':
+                tipo_cobro = 'kilos'
+            elif tipo_raw == 'C':
+                tipo_cobro = 'contrato'
+            else:
+                tipo_cobro = 'jornal'
+
+            precio = self._num(self._cel(row, self._COL_PRECIO)) or 0
+            medio_dia_sabado = self._cel(row, self._COL_MEDIO_DIA).upper() == 'X'
+
+            for i, (ci_lote, ci_labor, _ci_cob, ci_cant) in enumerate(self._DIA_COLS):
+                lote_val  = self._cel(row, ci_lote)
+                labor_val = self._cel(row, ci_labor)
+                cant_str  = self._cel(row, ci_cant)
+
+                if not lote_val and not labor_val and not cant_str:
+                    continue
+
+                es_medio_dia = (i == 5) and medio_dia_sabado
+                cant_num     = self._num(cant_str)
+                fecha_dia    = fecha_lunes + timedelta(days=i)
+
+                if tipo_cobro == 'kilos':
+                    cantidad = cant_num
+                    valor    = round(cant_num * precio) if cant_num and precio else None
+                elif tipo_cobro == 'jornal':
+                    cantidad = 0.5 if es_medio_dia else 1.0
+                    valor    = round(precio * cantidad) if precio else None
+                else:  # contrato — valor se calcula globalmente, aquí queda None
+                    cantidad = cant_num
+                    valor    = None
+
+                registros.append({
+                    'nombre':     nombre,
+                    'dia':        self._DIAS[i],
+                    'fecha':      fecha_dia.isoformat(),
+                    'lote':       lote_val or None,
+                    'labor':      labor_val or None,
+                    'cantidad':   cantidad,
+                    'tipo_cobro': tipo_cobro,
+                    'valor':      valor,
+                })
+
+        semana_ref = semana_ref_desde_fecha(fecha_lunes.isoformat())
+
+        return Response({
+            'ok': True,
+            'datos': {
+                'fecha_inicio': fecha_lunes.isoformat(),
+                'semana_ref':   semana_ref,
+                'registros':    registros,
+                'observaciones': None,
+            },
+        })
 
 
 class LeerPlanillaView(APIView):
