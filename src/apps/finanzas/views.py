@@ -213,8 +213,10 @@ class ResumenView(APIView):
             saldo_total += saldo_c
 
         # ── Global aggregates ─────────────────────────────────────────────────
-        egresos_agg = Egreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
+        from apps.nomina.models import ControlDiario
+        egresos_agg  = Egreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
         ingresos_agg = Ingreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
+        nomina_agg   = ControlDiario.objects.aggregate(total=Sum('valor'), count=Count('id'))
         cafe_agg = VentaCafe.objects.aggregate(
             total_kilos=Sum('kilos'), total_valor=Sum('valor_neto'), count=Count('id')
         )
@@ -229,6 +231,20 @@ class ResumenView(APIView):
             .order_by('-total')
         )
 
+        # ── KPIs financieros ──────────────────────────────────────────────────
+        total_ingresos = (
+            D(str(ingresos_agg['total'] or 0))
+            + D(str(cafe_agg['total_valor'] or 0))
+            + D(str(banano_agg['total_valor'] or 0))
+        )
+        total_costos = (
+            D(str(egresos_agg['total'] or 0))
+            + D(str(nomina_agg['total'] or 0))
+        )
+        utilidad = total_ingresos - total_costos
+        roi = round((utilidad / total_costos * 100), 2) if total_costos > 0 else D('0')
+        cobertura = round((total_ingresos / total_costos * 100), 2) if total_costos > 0 else D('0')
+
         return Response({
             'cuentas': cuentas,
             'saldo_total': str(saldo_total),
@@ -239,6 +255,10 @@ class ResumenView(APIView):
             'ingresos': {
                 'total': str(ingresos_agg['total'] or 0),
                 'count': ingresos_agg['count'],
+            },
+            'nomina': {
+                'total': str(nomina_agg['total'] or 0),
+                'count': nomina_agg['count'],
             },
             'ventas_cafe': {
                 'total_kilos': str(cafe_agg['total_kilos'] or 0),
@@ -255,6 +275,15 @@ class ResumenView(APIView):
                 for r in egresos_cat
             ],
             'empleados_activos': Empleado.objects.filter(activo=True).count(),
+            'kpis': {
+                'total_ingresos':  str(total_ingresos),
+                'total_costos':    str(total_costos),
+                'utilidad':        str(utilidad),
+                'roi':             str(roi),
+                'cobertura':       str(cobertura),
+                'punto_equilibrio': str(total_costos),
+                'ganando':         utilidad >= 0,
+            },
         })
 
 
