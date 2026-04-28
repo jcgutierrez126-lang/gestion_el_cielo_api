@@ -9,7 +9,7 @@ class LoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lote
         fields = [
-            'id', 'nombre', 'variedad', 'año_siembra', 'proxima_renovacion',
+            'id', 'abreviatura', 'nombre', 'variedad', 'año_siembra', 'proxima_renovacion',
             'num_arboles', 'gramos_abono_palo',
             'bultos_produccion', 'bultos_urea', 'bultos_dap',
             'activo', 'created_at', 'updated_at',
@@ -64,11 +64,12 @@ class VentaBananoSerializer(serializers.ModelSerializer):
 
 class FloracionSerializer(serializers.ModelSerializer):
     lote_nombre = serializers.CharField(source='lote.nombre', read_only=True, default=None)
+    lote_abreviatura = serializers.CharField(source='lote.abreviatura', read_only=True, default=None)
 
     class Meta:
         model = Floracion
         fields = [
-            'id', 'fecha', 'lote', 'lote_nombre', 'calidad',
+            'id', 'fecha', 'lote', 'lote_nombre', 'lote_abreviatura', 'calidad',
             'abonada_ideal', 'broca_ideal', 'roya_ideal',
             'created_at', 'updated_at',
         ]
@@ -83,12 +84,13 @@ class MezclaAbonoFertilizanteSerializer(serializers.ModelSerializer):
 
 class MezclaAbonoSerializer(serializers.ModelSerializer):
     lote_nombre = serializers.CharField(source='lote.nombre', read_only=True, default=None)
+    lote_abreviatura = serializers.CharField(source='lote.abreviatura', read_only=True, default=None)
     fertilizantes = MezclaAbonoFertilizanteSerializer(many=True, required=False)
 
     class Meta:
         model = MezclaAbono
         fields = [
-            'id', 'fecha', 'formula', 'lote', 'lote_nombre',
+            'id', 'fecha', 'formula', 'lote', 'lote_nombre', 'lote_abreviatura',
             'num_arboles', 'gramos_por_arbol', 'costo_total',
             'fertilizantes', 'created_at', 'updated_at',
         ]

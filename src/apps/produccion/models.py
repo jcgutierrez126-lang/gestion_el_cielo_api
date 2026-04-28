@@ -46,6 +46,7 @@ PRESENTACIONES_TOSTADO = [
 
 
 class Lote(BaseModel):
+    abreviatura = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name="Abreviatura")
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del lote")
     variedad = models.CharField(max_length=100, blank=True, null=True, verbose_name="Variedad")
     año_siembra = models.CharField(max_length=50, blank=True, null=True, verbose_name="Año siembra / zoca")
@@ -73,7 +74,7 @@ class Lote(BaseModel):
         verbose_name_plural = "Lotes"
 
     def __str__(self):
-        return self.nombre
+        return f"{self.abreviatura} — {self.nombre}" if self.abreviatura else self.nombre
 
 
 class VentaCafe(BaseModel):
