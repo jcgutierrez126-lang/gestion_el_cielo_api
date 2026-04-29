@@ -13,6 +13,7 @@ from apps.usuarios.api.views import (
     PasswordResetConfirmAPIView,
     VerifyResetCodeAPIView,
     UserRegisterAPIView,
+    MeView,
 )
 
 urlpatterns = [
@@ -36,4 +37,7 @@ urlpatterns = [
 
     # Grupos
     path('group-list/', GroupListAPIView.as_view(), name='group-list'),
+
+    # Perfil del usuario autenticado
+    path('me/', MeView.as_view(), name='me'),
 ]

@@ -736,3 +736,41 @@ class GroupListAPIView(ListAPIView):
 
     def get_queryset(self):
         return Group.objects.all()
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _serialize(self, user):
+        return {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role.name if user.role else '',
+            'is_superuser': user.is_admin,
+            'avatar_url': user.avatar_url or '',
+            'date_joined': user.created_at.isoformat() if user.created_at else None,
+            'last_login': user.last_login.isoformat() if user.last_login else None,
+        }
+
+    def get(self, request):
+        return Response(self._serialize(request.user))
+
+    def patch(self, request):
+        user = request.user
+        data = request.data
+
+        if 'email' in data:
+            user.email = data['email']
+
+        if 'avatar_url' in data:
+            user.avatar_url = data['avatar_url']
+
+        if 'password' in data:
+            old_password = data.get('old_password', '')
+            if not old_password or not user.check_password(old_password):
+                return Response({'error': 'Contraseña actual incorrecta'}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(data['password'])
+
+        user.save()
+        return Response(self._serialize(user))
