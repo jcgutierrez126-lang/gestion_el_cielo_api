@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TipoLabor, TipoCobro, Empleado, ControlSemanal, PrestamoEmpleado, ControlDiario, AbonoPrestamo
+from .models import TipoLabor, TipoCobro, Empleado, ControlSemanal, PrestamoEmpleado, AbonoPrestamo
 
 @admin.register(TipoLabor)
 class TipoLaborAdmin(admin.ModelAdmin):
@@ -25,13 +25,6 @@ class ControlSemanalAdmin(admin.ModelAdmin):
     list_filter = ("fecha_inicio", "lote", "tipo_labor", "tipo_cobro")
     search_fields = ("empleado__nombre_completo",)
     date_hierarchy = "fecha_inicio"
-
-@admin.register(ControlDiario)
-class ControlDiarioAdmin(admin.ModelAdmin):
-    list_display = ("semana_ref", "fecha", "dia", "nombre", "lote", "labor", "tipo_cobro", "cantidad", "valor")
-    list_filter = ("semana_ref", "dia")
-    search_fields = ("nombre", "lote", "labor")
-    date_hierarchy = "fecha"
 
 @admin.register(PrestamoEmpleado)
 class PrestamoEmpleadoAdmin(admin.ModelAdmin):

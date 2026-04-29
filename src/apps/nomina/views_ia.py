@@ -9,8 +9,11 @@ import anthropic
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status
+
+from .models import Empleado, TipoLabor, TipoCobro, ControlSemanal
+from apps.produccion.models import Lote
 
 logger = logging.getLogger(__name__)
 
@@ -454,3 +457,118 @@ class LeerPlanillaView(APIView):
             logger.error('Error API Anthropic: %s', e)
             return Response({'error': 'Error al llamar a la API de Claude.', 'detalle': str(e)},
                             status=status.HTTP_502_BAD_GATEWAY)
+
+
+def _buscar_empleado(nombre: str):
+    if not nombre:
+        return None
+    try:
+        return Empleado.objects.get(nombre_completo__iexact=nombre.strip())
+    except Empleado.DoesNotExist:
+        return Empleado.objects.filter(nombre_completo__icontains=nombre.strip()).first()
+    except Empleado.MultipleObjectsReturned:
+        return Empleado.objects.filter(nombre_completo__icontains=nombre.strip()).first()
+
+
+def _buscar_tipo_labor(texto: str):
+    if not texto:
+        return None
+    t = texto.strip()
+    return TipoLabor.objects.filter(abreviatura__iexact=t).first() or \
+           TipoLabor.objects.filter(nombre__icontains=t).first()
+
+
+def _buscar_tipo_cobro(texto: str):
+    if not texto:
+        return None
+    t = texto.strip()
+    return TipoCobro.objects.filter(abreviatura__iexact=t).first() or \
+           TipoCobro.objects.filter(nombre__icontains=t).first()
+
+
+def _buscar_lote(texto: str):
+    if not texto:
+        return None
+    t = texto.strip()
+    return Lote.objects.filter(abreviatura__iexact=t).first() or \
+           Lote.objects.filter(nombre__icontains=t).first()
+
+
+class GuardarPlanillaView(APIView):
+    """Guarda registros parseados de planilla en ControlSemanal resolviendo FKs por nombre/abreviatura."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser]
+
+    def post(self, request):
+        datos = request.data
+        semana_ref = datos.get('semana_ref', '')
+        fecha_inicio_str = datos.get('fecha_inicio', '')
+        registros_raw = datos.get('registros', [])
+
+        try:
+            fecha_lunes = date.fromisoformat(fecha_inicio_str)
+        except (ValueError, TypeError):
+            return Response({'error': 'fecha_inicio inválida (YYYY-MM-DD requerido)'}, status=status.HTTP_400_BAD_REQUEST)
+
+        fecha_sabado = fecha_lunes + timedelta(days=5)
+        creados = []
+        errores = []
+
+        for i, r in enumerate(registros_raw):
+            nombre = r.get('nombre', '')
+            labor_txt = r.get('labor', '')
+            tipo_cobro_txt = r.get('tipo_cobro', '')
+            lote_txt = r.get('lote') or ''
+            dia = r.get('dia', '')
+            fecha_str = r.get('fecha', '') or fecha_inicio_str
+            cantidad = r.get('cantidad')
+            valor = r.get('valor')
+
+            empleado = _buscar_empleado(nombre)
+            tipo_labor = _buscar_tipo_labor(labor_txt)
+            tipo_cobro = _buscar_tipo_cobro(tipo_cobro_txt)
+            lote = _buscar_lote(lote_txt)
+
+            faltantes = []
+            if not empleado:
+                faltantes.append(f'empleado "{nombre}"')
+            if not tipo_labor:
+                faltantes.append(f'labor "{labor_txt}"')
+            if not tipo_cobro:
+                faltantes.append(f'tipo_cobro "{tipo_cobro_txt}"')
+
+            if faltantes:
+                errores.append({'fila': i + 1, 'nombre': nombre, 'motivo': f'No encontrado: {", ".join(faltantes)}'})
+                continue
+
+            try:
+                fecha_dia = date.fromisoformat(fecha_str)
+            except (ValueError, TypeError):
+                fecha_dia = fecha_lunes
+
+            kilos = float(cantidad) if tipo_cobro_txt.lower() == 'kilos' and cantidad is not None else None
+            jornales = float(cantidad) if tipo_cobro_txt.lower() != 'kilos' and cantidad is not None else None
+
+            ControlSemanal.objects.create(
+                empleado=empleado,
+                semana_ref=semana_ref,
+                dia=dia,
+                fecha=fecha_dia,
+                fecha_inicio=fecha_lunes,
+                fecha_fin=fecha_sabado,
+                tipo_labor=tipo_labor,
+                tipo_cobro=tipo_cobro,
+                lote=lote,
+                kilos=kilos,
+                jornales=jornales,
+                costo_unidad=0,
+                valor=valor or 0,
+            )
+            creados.append(nombre)
+
+        return Response({
+            'ok': True,
+            'creados': len(creados),
+            'errores': errores,
+            'semana_ref': semana_ref,
+        }, status=status.HTTP_201_CREATED)

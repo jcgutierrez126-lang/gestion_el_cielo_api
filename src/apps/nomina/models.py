@@ -92,8 +92,11 @@ class ControlSemanal(BaseModel):
     jornales = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Jornales"
     )
+    semana_ref = models.CharField(max_length=150, blank=True, default='', db_index=True, verbose_name='Semana referencia')
+    dia = models.CharField(max_length=20, blank=True, null=True, verbose_name='Día')
+    fecha = models.DateField(null=True, blank=True, db_index=True, verbose_name='Fecha')
     costo_unidad = models.DecimalField(
-        max_digits=12, decimal_places=5, verbose_name="Costo x kilo / jornal"
+        max_digits=12, decimal_places=5, default=0, verbose_name="Costo x kilo / jornal"
     )
     valor = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor total")
     observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
@@ -110,6 +113,7 @@ class ControlSemanal(BaseModel):
         indexes = [
             models.Index(fields=['empleado', 'fecha_inicio']),
             models.Index(fields=['fecha_inicio', 'tipo_labor']),
+            models.Index(fields=['semana_ref']),
         ]
 
     def __str__(self):
@@ -142,31 +146,6 @@ class PrestamoEmpleado(BaseModel):
         )['total'] or 0
         self.saldo = self.valor - total_abonado
         self.save(update_fields=['saldo'])
-
-
-class ControlDiario(BaseModel):
-    semana_ref = models.CharField(max_length=150, blank=True, default='', verbose_name='Semana referencia')
-    fecha = models.DateField(db_index=True, verbose_name='Fecha')
-    dia = models.CharField(max_length=20, blank=True, default='', verbose_name='Día')
-    nombre = models.CharField(max_length=200, verbose_name='Nombre trabajador')
-    lote = models.CharField(max_length=100, blank=True, default='', verbose_name='Lote')
-    labor = models.CharField(max_length=150, verbose_name='Labor')
-    cantidad = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Cantidad/Kilos'
-    )
-    tipo_cobro = models.CharField(max_length=50, blank=True, default='', verbose_name='Tipo cobro')
-    valor = models.DecimalField(
-        max_digits=12, decimal_places=0, null=True, blank=True, verbose_name='Valor'
-    )
-
-    class Meta:
-        db_table = 'control_diario'
-        verbose_name = 'Control Diario'
-        verbose_name_plural = 'Control Diario'
-        ordering = ['-fecha', 'nombre']
-
-    def __str__(self):
-        return f"{self.nombre} | {self.fecha} ({self.dia}) | {self.labor}"
 
 
 class AbonoPrestamo(BaseModel):
