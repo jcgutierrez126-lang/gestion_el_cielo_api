@@ -213,10 +213,10 @@ class ResumenView(APIView):
             saldo_total += saldo_c
 
         # ── Global aggregates ─────────────────────────────────────────────────
-        from apps.nomina.models import ControlDiario
+        from apps.nomina.models import ControlSemanal
         egresos_agg  = Egreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
         ingresos_agg = Ingreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
-        nomina_agg   = ControlDiario.objects.aggregate(total=Sum('valor'), count=Count('id'))
+        nomina_agg   = ControlSemanal.objects.aggregate(total=Sum('valor'), count=Count('id'))
         cafe_agg = VentaCafe.objects.aggregate(
             total_kilos=Sum('kilos'), total_valor=Sum('valor_neto'), count=Count('id')
         )
