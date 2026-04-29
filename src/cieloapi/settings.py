@@ -154,9 +154,12 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "https://localhost:3000
 
 CSRF_TRUSTED_ORIGINS = [
     "https://cieloapi.lambdaanalytics.co",
+    "https://contabilidad.fincaelcielocoffee.com",
     "http://localhost:9002",
     "http://localhost:3000",
 ]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # --- CACHE SETTINGS ---
 CACHES = {
