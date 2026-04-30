@@ -30,7 +30,8 @@ class LoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lote
         fields = [
-            'id', 'abreviatura', 'nombre', 'variedad', 'variedad_nombre', 'año_siembra', 'proxima_renovacion',
+            'id', 'abreviatura', 'nombre', 'variedad', 'variedad_nombre',
+            'tipo_cultivo', 'año_siembra', 'proxima_renovacion',
             'num_arboles', 'gramos_abono_palo',
             'bultos_produccion', 'bultos_urea', 'bultos_dap',
             'activo', 'created_at', 'updated_at',
