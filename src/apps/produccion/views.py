@@ -1,7 +1,12 @@
+import base64
+import json
+import anthropic as _anthropic
+from django.db import transaction
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser
 from django.db.models import Sum
 from django.db.models.functions import TruncWeek, TruncMonth, TruncYear
 from .models import (
@@ -196,6 +201,74 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
             {'tipo_id': r['tipo_platano__id'], 'nombre': r['tipo_platano__nombre'], 'valor': float(r['valor'] or 0)}
             for r in rows
         ])
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser])
+    def parse_factura(self, request):
+        imagen = request.FILES.get('imagen')
+        if not imagen:
+            return Response({'error': 'Se requiere una imagen'}, status=400)
+
+        image_data = base64.standard_b64encode(imagen.read()).decode('utf-8')
+        media_type = imagen.content_type or 'image/jpeg'
+
+        client = _anthropic.Anthropic()
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": media_type, "data": image_data},
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "Esta es una factura de liquidación de banano de la Cooperativa COMSAB (Colombia).\n"
+                            "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
+                            "{\n"
+                            '  "fecha": "YYYY-MM-DD",\n'
+                            '  "items": [\n'
+                            '    {"descripcion": "texto exacto de la columna Descripción", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
+                            '  ],\n'
+                            '  "deducciones": [{"concepto": "nombre exacto", "valor": 2341}],\n'
+                            '  "total_pagos": 2256418,\n'
+                            '  "total_a_pagar": 2208949\n'
+                            "}\n"
+                            "La fecha es 'Fecha Liquidación', formato YYYY-MM-DD. "
+                            "Columna Cantidad = kilos, Valor Unitario = precio_kilo. "
+                            "Los números sin puntos de miles ni símbolos de moneda."
+                        ),
+                    },
+                ],
+            }],
+        )
+
+        text = message.content[0].text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
+
+        data = json.loads(text)
+        return Response(data)
+
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        items = request.data.get('items', [])
+        if not items:
+            return Response({'error': 'Se requieren items'}, status=400)
+
+        serializers_list = []
+        for item in items:
+            s = VentaBananoSerializer(data=item)
+            s.is_valid(raise_exception=True)
+            serializers_list.append(s)
+
+        with transaction.atomic():
+            created = [s.save() for s in serializers_list]
+
+        return Response(VentaBananoSerializer(created, many=True).data, status=201)
 
 
 class FloracionViewSet(viewsets.ModelViewSet):
