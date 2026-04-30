@@ -14,6 +14,10 @@ from apps.usuarios.api.views import (
     VerifyResetCodeAPIView,
     UserRegisterAPIView,
     MeView,
+    UserSettingsListView,
+    UserSettingsCreateView,
+    UserSettingsPatchView,
+    UserSettingsDeleteView,
 )
 
 urlpatterns = [
@@ -40,4 +44,10 @@ urlpatterns = [
 
     # Perfil del usuario autenticado
     path('me/', MeView.as_view(), name='me'),
+
+    # Gestión de usuarios (settings page)
+    path('settings/list/', UserSettingsListView.as_view(), name='settings-user-list'),
+    path('settings/create/', UserSettingsCreateView.as_view(), name='settings-user-create'),
+    path('settings/<int:pk>/patch/', UserSettingsPatchView.as_view(), name='settings-user-patch'),
+    path('settings/<int:pk>/delete/', UserSettingsDeleteView.as_view(), name='settings-user-delete'),
 ]

@@ -775,3 +775,103 @@ class MeView(APIView):
 
         user.save()
         return Response(self._serialize(user))
+
+
+def _serialize_user(user):
+    return {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'role': user.role.name if user.role else '',
+        'is_active': user.status,
+        'is_superuser': user.is_admin,
+    }
+
+
+class UserSettingsListView(APIView):
+    """Lista de usuarios para la página de configuración."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        users = User.objects.select_related('role').order_by('username')
+        return Response([_serialize_user(u) for u in users])
+
+
+class UserSettingsCreateView(APIView):
+    """Crear usuario desde la página de configuración."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        email = data.get('email', '').strip()
+        role_name = data.get('role', '').strip()
+
+        if not username or not password:
+            return Response({'error': 'Usuario y contraseña son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Ya existe un usuario con ese nombre.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        role = None
+        if role_name:
+            from django.contrib.auth.models import Group
+            role, _ = Group.objects.get_or_create(name=role_name)
+
+        user = User(
+            username=username,
+            email=email,
+            first_name=username,
+            last_name='-',
+            phone='-',
+            identification='0',
+            status=True,
+            is_admin=(role_name == 'administrador'),
+        )
+        user.set_password(password)
+        if role:
+            user.role = role
+        user.save()
+        return Response(_serialize_user(user), status=status.HTTP_201_CREATED)
+
+
+class UserSettingsPatchView(APIView):
+    """Editar usuario desde la página de configuración."""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        if 'email' in data:
+            user.email = data['email']
+        if 'password' in data and data['password']:
+            user.set_password(data['password'])
+        if 'is_active' in data:
+            user.status = data['is_active']
+        if 'role' in data:
+            from django.contrib.auth.models import Group
+            role_name = data['role']
+            role, _ = Group.objects.get_or_create(name=role_name)
+            user.role = role
+            user.is_admin = (role_name == 'administrador')
+
+        user.save()
+        return Response(_serialize_user(user))
+
+
+class UserSettingsDeleteView(APIView):
+    """Eliminar usuario desde la página de configuración."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
