@@ -44,6 +44,7 @@ def generate_login_response(user, request):
         "first_name": user.first_name,
         "last_name": user.last_name,
         "image": image_url,
+        "avatar_url": user.avatar_url or "",
         "full_name": user.full_name,
         "role_id": user.role.id if user.role else None,
         "role_name": user.role.name if user.role else None,
