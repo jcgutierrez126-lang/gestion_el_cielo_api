@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (
-    TipoBanano, TipoCafe,
+    TipoBanano, TipoCafe, VariedadLote,
     Lote, VentaCafe, VentaCafeTostado, VentaBanano,
     Floracion, MezclaAbono, MezclaAbonoFertilizante,
 )
@@ -18,11 +18,19 @@ class TipoCafeSerializer(serializers.ModelSerializer):
         fields = ['id', 'nombre', 'status']
 
 
+class VariedadLoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VariedadLote
+        fields = ['id', 'nombre', 'status']
+
+
 class LoteSerializer(serializers.ModelSerializer):
+    variedad_nombre = serializers.CharField(source='variedad.nombre', read_only=True, default=None)
+
     class Meta:
         model = Lote
         fields = [
-            'id', 'abreviatura', 'nombre', 'variedad', 'año_siembra', 'proxima_renovacion',
+            'id', 'abreviatura', 'nombre', 'variedad', 'variedad_nombre', 'año_siembra', 'proxima_renovacion',
             'num_arboles', 'gramos_abono_palo',
             'bultos_produccion', 'bultos_urea', 'bultos_dap',
             'activo', 'created_at', 'updated_at',

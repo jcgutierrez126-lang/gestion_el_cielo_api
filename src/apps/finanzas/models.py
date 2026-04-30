@@ -56,13 +56,29 @@ class Cuenta(BaseModel):
         return self.nombre
 
 
+class Ciudad(BaseModel):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+
+    class Meta:
+        db_table = "ciudades"
+        verbose_name = "Ciudad"
+        verbose_name_plural = "Ciudades"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
 class Proveedor(BaseModel):
     nombre = models.CharField(max_length=200, verbose_name="Nombre")
     telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
     celular = models.CharField(max_length=20, blank=True, null=True, verbose_name="Celular")
     cedula_nit = models.CharField(max_length=30, blank=True, null=True, verbose_name="Cédula / NIT")
     direccion = models.CharField(max_length=200, blank=True, null=True, verbose_name="Dirección")
-    ciudad = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ciudad")
+    ciudad = models.ForeignKey(
+        Ciudad, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='proveedores', verbose_name="Ciudad"
+    )
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
     comentarios = models.TextField(blank=True, null=True, verbose_name="Comentarios")
 

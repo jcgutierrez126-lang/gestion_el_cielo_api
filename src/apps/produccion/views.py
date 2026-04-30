@@ -10,12 +10,12 @@ from rest_framework.parsers import MultiPartParser
 from django.db.models import Sum
 from django.db.models.functions import TruncWeek, TruncMonth, TruncYear
 from .models import (
-    TipoBanano, TipoCafe,
+    TipoBanano, TipoCafe, VariedadLote,
     Lote, VentaCafe, VentaCafeTostado, VentaBanano,
     Floracion, MezclaAbono,
 )
 from .serializers import (
-    TipoBananoSerializer, TipoCafeSerializer,
+    TipoBananoSerializer, TipoCafeSerializer, VariedadLoteSerializer,
     LoteSerializer, VentaCafeSerializer, VentaCafeTostadoSerializer,
     VentaBananoSerializer, FloracionSerializer, MezclaAbonoSerializer,
 )
@@ -49,6 +49,17 @@ class TipoCafeViewSet(viewsets.ModelViewSet):
         if activo is not None:
             qs = qs.filter(status=activo.lower() == 'true')
         return qs.order_by('nombre')
+
+
+class VariedadLoteViewSet(viewsets.ModelViewSet):
+    serializer_class = VariedadLoteSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['nombre']
+
+    def get_queryset(self):
+        return VariedadLote.objects.all().order_by('nombre')
 
 
 class LoteViewSet(viewsets.ModelViewSet):

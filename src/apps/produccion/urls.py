@@ -1,6 +1,6 @@
 from rest_framework.routers import DefaultRouter
 from .views import (
-    TipoBananoViewSet, TipoCafeViewSet,
+    TipoBananoViewSet, TipoCafeViewSet, VariedadLoteViewSet,
     LoteViewSet, VentaCafeViewSet, VentaCafeTostadoViewSet,
     VentaBananoViewSet, FloracionViewSet, MezclaAbonoViewSet,
 )
@@ -8,6 +8,7 @@ from .views import (
 router = DefaultRouter()
 router.register('tipos-banano', TipoBananoViewSet, basename='tipos-banano')
 router.register('tipos-cafe', TipoCafeViewSet, basename='tipos-cafe')
+router.register('variedades-lote', VariedadLoteViewSet, basename='variedades-lote')
 router.register('lotes', LoteViewSet, basename='lotes')
 router.register('ventas-cafe', VentaCafeViewSet, basename='ventas-cafe')
 router.register('ventas-cafe-tostado', VentaCafeTostadoViewSet, basename='ventas-cafe-tostado')

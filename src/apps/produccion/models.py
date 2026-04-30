@@ -43,10 +43,26 @@ class TipoCafe(BaseModel):
         return self.nombre
 
 
+class VariedadLote(BaseModel):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+
+    class Meta:
+        db_table = "variedades_lote"
+        verbose_name = "Variedad de Lote"
+        verbose_name_plural = "Variedades de Lote"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
 class Lote(BaseModel):
     abreviatura = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name="Abreviatura")
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del lote")
-    variedad = models.CharField(max_length=100, blank=True, null=True, verbose_name="Variedad")
+    variedad = models.ForeignKey(
+        VariedadLote, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='lotes', verbose_name="Variedad"
+    )
     año_siembra = models.CharField(max_length=50, blank=True, null=True, verbose_name="Año siembra / zoca")
     proxima_renovacion = models.CharField(
         max_length=50, blank=True, null=True, verbose_name="Próxima renovación"

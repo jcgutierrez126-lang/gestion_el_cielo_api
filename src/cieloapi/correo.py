@@ -28,8 +28,7 @@ def get_access_token():
             app = ConfidentialClientApplication(
                 client_id,
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
-                client_credential=secret,
-            )
+                client_credential=secret)
             print("App construida.")
         except Exception as e:
             print("Error construyendo la app:", e)

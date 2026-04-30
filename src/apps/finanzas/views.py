@@ -4,11 +4,22 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Sum, Count, Avg
 from django.db.models.functions import TruncMonth
-from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
+from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
 from .serializers import (
-    CuentaSerializer, ProveedorSerializer, EgresoSerializer,
+    CiudadSerializer, CuentaSerializer, ProveedorSerializer, EgresoSerializer,
     IngresoSerializer, TransaccionSerializer, ObservacionSerializer,
 )
+
+
+class CiudadViewSet(viewsets.ModelViewSet):
+    serializer_class = CiudadSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['nombre']
+
+    def get_queryset(self):
+        return Ciudad.objects.all().order_by('nombre')
 
 
 class CuentaViewSet(viewsets.ModelViewSet):
@@ -25,14 +36,14 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     serializer_class = ProveedorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['nombre', 'cedula_nit', 'ciudad', 'email']
-    ordering_fields = ['nombre', 'ciudad', 'created_at']
+    search_fields = ['nombre', 'cedula_nit', 'ciudad__nombre', 'email']
+    ordering_fields = ['nombre', 'created_at']
 
     def get_queryset(self):
-        qs = Proveedor.objects.all()
+        qs = Proveedor.objects.select_related('ciudad').all()
         ciudad = self.request.query_params.get('ciudad')
         if ciudad:
-            qs = qs.filter(ciudad__icontains=ciudad)
+            qs = qs.filter(ciudad_id=ciudad)
         return qs.order_by('nombre')
 
 

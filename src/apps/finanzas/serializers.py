@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
+from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
 
 
 class CuentaSerializer(serializers.ModelSerializer):
@@ -14,12 +14,20 @@ class CuentaSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
+class CiudadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ciudad
+        fields = ['id', 'nombre', 'status']
+
+
 class ProveedorSerializer(serializers.ModelSerializer):
+    ciudad_nombre = serializers.CharField(source='ciudad.nombre', read_only=True, default=None)
+
     class Meta:
         model = Proveedor
         fields = [
             'id', 'nombre', 'telefono', 'celular', 'cedula_nit',
-            'direccion', 'ciudad', 'email', 'comentarios',
+            'direccion', 'ciudad', 'ciudad_nombre', 'email', 'comentarios',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
