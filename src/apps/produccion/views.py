@@ -143,41 +143,46 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
         image_data = base64.standard_b64encode(imagen.read()).decode('utf-8')
         media_type = imagen.content_type or 'image/jpeg'
 
-        client = _anthropic.Anthropic()
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {"type": "base64", "media_type": media_type, "data": image_data},
-                    },
-                    {
-                        "type": "text",
-                        "text": (
-                            "Esta es una factura de compra de café (COF) de una cooperativa colombiana.\n"
-                            "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
-                            "{\n"
-                            '  "fecha": "YYYY-MM-DD",\n'
-                            '  "comprador": "nombre completo de la cooperativa del encabezado",\n'
-                            '  "factura": "número de factura",\n'
-                            '  "items": [\n'
-                            '    {"descripcion": "texto del artículo", "kilos": 128.0, "precio_kilo": 24800.0, "valor_total": 3174400}\n'
-                            '  ],\n'
-                            '  "retenciones": 0.0,\n'
-                            '  "total": 3174400.0\n'
-                            "}\n"
-                            "La fecha está en el campo FECHA (formato dd-mes-aa → YYYY-MM-DD). "
-                            "Columna CANT = kilos, COSTO = precio_kilo. "
-                            "Retenciones viene del resumen inferior. "
-                            "Números sin puntos de miles ni símbolos."
-                        ),
-                    },
-                ],
-            }],
-        )
+        try:
+            client = _anthropic.Anthropic()
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {"type": "base64", "media_type": media_type, "data": image_data},
+                        },
+                        {
+                            "type": "text",
+                            "text": (
+                                "Esta es una factura de compra de café (COF) de una cooperativa colombiana.\n"
+                                "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
+                                "{\n"
+                                '  "fecha": "YYYY-MM-DD",\n'
+                                '  "comprador": "nombre completo de la cooperativa del encabezado",\n'
+                                '  "factura": "número de factura",\n'
+                                '  "items": [\n'
+                                '    {"descripcion": "texto del artículo", "kilos": 128.0, "precio_kilo": 24800.0, "valor_total": 3174400}\n'
+                                '  ],\n'
+                                '  "retenciones": 0.0,\n'
+                                '  "total": 3174400.0\n'
+                                "}\n"
+                                "La fecha está en el campo FECHA (formato dd-mes-aa → YYYY-MM-DD). "
+                                "Columna CANT = kilos, COSTO = precio_kilo. "
+                                "Retenciones viene del resumen inferior. "
+                                "Números sin puntos de miles ni símbolos."
+                            ),
+                        },
+                    ],
+                }],
+            )
+        except _anthropic.BadRequestError as e:
+            return Response({'error': str(e)}, status=502)
+        except _anthropic.APIError as e:
+            return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
 
         text = message.content[0].text.strip()
         if text.startswith("```"):
@@ -292,39 +297,44 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
         image_data = base64.standard_b64encode(imagen.read()).decode('utf-8')
         media_type = imagen.content_type or 'image/jpeg'
 
-        client = _anthropic.Anthropic()
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {"type": "base64", "media_type": media_type, "data": image_data},
-                    },
-                    {
-                        "type": "text",
-                        "text": (
-                            "Esta es una factura de liquidación de banano de la Cooperativa COMSAB (Colombia).\n"
-                            "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
-                            "{\n"
-                            '  "fecha": "YYYY-MM-DD",\n'
-                            '  "items": [\n'
-                            '    {"descripcion": "texto exacto de la columna Descripción", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
-                            '  ],\n'
-                            '  "deducciones": [{"concepto": "nombre exacto", "valor": 2341}],\n'
-                            '  "total_pagos": 2256418,\n'
-                            '  "total_a_pagar": 2208949\n'
-                            "}\n"
-                            "La fecha es 'Fecha Liquidación', formato YYYY-MM-DD. "
-                            "Columna Cantidad = kilos, Valor Unitario = precio_kilo. "
-                            "Los números sin puntos de miles ni símbolos de moneda."
-                        ),
-                    },
-                ],
-            }],
-        )
+        try:
+            client = _anthropic.Anthropic()
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {"type": "base64", "media_type": media_type, "data": image_data},
+                        },
+                        {
+                            "type": "text",
+                            "text": (
+                                "Esta es una factura de liquidación de banano de la Cooperativa COMSAB (Colombia).\n"
+                                "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
+                                "{\n"
+                                '  "fecha": "YYYY-MM-DD",\n'
+                                '  "items": [\n'
+                                '    {"descripcion": "texto exacto de la columna Descripción", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
+                                '  ],\n'
+                                '  "deducciones": [{"concepto": "nombre exacto", "valor": 2341}],\n'
+                                '  "total_pagos": 2256418,\n'
+                                '  "total_a_pagar": 2208949\n'
+                                "}\n"
+                                "La fecha es 'Fecha Liquidación', formato YYYY-MM-DD. "
+                                "Columna Cantidad = kilos, Valor Unitario = precio_kilo. "
+                                "Los números sin puntos de miles ni símbolos de moneda."
+                            ),
+                        },
+                    ],
+                }],
+            )
+        except _anthropic.BadRequestError as e:
+            return Response({'error': str(e)}, status=502)
+        except _anthropic.APIError as e:
+            return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
 
         text = message.content[0].text.strip()
         if text.startswith("```"):
