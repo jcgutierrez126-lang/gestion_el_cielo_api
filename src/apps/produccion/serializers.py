@@ -1,8 +1,21 @@
 from rest_framework import serializers
 from .models import (
+    TipoBanano, TipoCafe,
     Lote, VentaCafe, VentaCafeTostado, VentaBanano,
     Floracion, MezclaAbono, MezclaAbonoFertilizante,
 )
+
+
+class TipoBananoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoBanano
+        fields = ['id', 'nombre', 'status']
+
+
+class TipoCafeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoCafe
+        fields = ['id', 'nombre', 'status']
 
 
 class LoteSerializer(serializers.ModelSerializer):
@@ -19,11 +32,12 @@ class LoteSerializer(serializers.ModelSerializer):
 
 class VentaCafeSerializer(serializers.ModelSerializer):
     cuenta_destino_nombre = serializers.CharField(source='cuenta_destino.nombre', read_only=True)
+    tipo_cafe_nombre = serializers.CharField(source='tipo_cafe.nombre', read_only=True)
 
     class Meta:
         model = VentaCafe
         fields = [
-            'id', 'fecha', 'kilos', 'cargas', 'tipo_cafe', 'factor',
+            'id', 'fecha', 'kilos', 'cargas', 'tipo_cafe', 'tipo_cafe_nombre', 'factor',
             'precio_kilo', 'precio_carga', 'comprador',
             'valor_total', 'deduccion', 'retefuente', 'valor_neto',
             'cuenta_destino', 'cuenta_destino_nombre',
@@ -50,11 +64,12 @@ class VentaCafeTostadoSerializer(serializers.ModelSerializer):
 
 class VentaBananoSerializer(serializers.ModelSerializer):
     cuenta_destino_nombre = serializers.CharField(source='cuenta_destino.nombre', read_only=True)
+    tipo_nombre = serializers.CharField(source='tipo_platano.nombre', read_only=True)
 
     class Meta:
         model = VentaBanano
         fields = [
-            'id', 'fecha', 'tipo_platano', 'kilos', 'precio_kilo', 'valor_total',
+            'id', 'fecha', 'tipo_platano', 'tipo_nombre', 'kilos', 'precio_kilo', 'valor_total',
             'cuenta_destino', 'cuenta_destino_nombre',
             'facturado_a', 'observaciones',
             'created_at', 'updated_at',

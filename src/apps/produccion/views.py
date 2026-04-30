@@ -1,13 +1,45 @@
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from .models import (
+    TipoBanano, TipoCafe,
     Lote, VentaCafe, VentaCafeTostado, VentaBanano,
     Floracion, MezclaAbono,
 )
 from .serializers import (
+    TipoBananoSerializer, TipoCafeSerializer,
     LoteSerializer, VentaCafeSerializer, VentaCafeTostadoSerializer,
     VentaBananoSerializer, FloracionSerializer, MezclaAbonoSerializer,
 )
+
+
+class TipoBananoViewSet(viewsets.ModelViewSet):
+    serializer_class = TipoBananoSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['nombre']
+
+    def get_queryset(self):
+        qs = TipoBanano.objects.all()
+        activo = self.request.query_params.get('activo')
+        if activo is not None:
+            qs = qs.filter(status=activo.lower() == 'true')
+        return qs.order_by('nombre')
+
+
+class TipoCafeViewSet(viewsets.ModelViewSet):
+    serializer_class = TipoCafeSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['nombre']
+
+    def get_queryset(self):
+        qs = TipoCafe.objects.all()
+        activo = self.request.query_params.get('activo')
+        if activo is not None:
+            qs = qs.filter(status=activo.lower() == 'true')
+        return qs.order_by('nombre')
 
 
 class LoteViewSet(viewsets.ModelViewSet):
@@ -34,7 +66,7 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
     ordering_fields = ['fecha', 'kilos', 'valor_neto', 'tipo_cafe', 'created_at']
 
     def get_queryset(self):
-        qs = VentaCafe.objects.select_related('cuenta_destino').all()
+        qs = VentaCafe.objects.select_related('cuenta_destino', 'tipo_cafe').all()
         p = self.request.query_params
 
         fecha_desde = p.get('fecha_desde')
@@ -47,7 +79,7 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
         if fecha_hasta:
             qs = qs.filter(fecha__lte=fecha_hasta)
         if tipo_cafe:
-            qs = qs.filter(tipo_cafe=tipo_cafe)
+            qs = qs.filter(tipo_cafe_id=tipo_cafe)
         if cuenta:
             qs = qs.filter(cuenta_destino_id=cuenta)
 
@@ -87,7 +119,7 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
     ordering_fields = ['fecha', 'kilos', 'valor_total', 'tipo_platano', 'created_at']
 
     def get_queryset(self):
-        qs = VentaBanano.objects.select_related('cuenta_destino').all()
+        qs = VentaBanano.objects.select_related('cuenta_destino', 'tipo_platano').all()
         p = self.request.query_params
 
         fecha_desde = p.get('fecha_desde')
@@ -99,7 +131,7 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
         if fecha_hasta:
             qs = qs.filter(fecha__lte=fecha_hasta)
         if tipo_platano:
-            qs = qs.filter(tipo_platano=tipo_platano)
+            qs = qs.filter(tipo_platano_id=tipo_platano)
 
         return qs.order_by('-fecha')
 

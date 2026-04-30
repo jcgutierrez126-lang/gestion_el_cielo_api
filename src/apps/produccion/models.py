@@ -3,14 +3,6 @@ from cieloapi.base_model import BaseModel
 from apps.finanzas.models import Cuenta
 
 
-TIPOS_CAFE = [
-    ('pergamino_seco', 'Pergamino Seco'),
-    ('pasilla', 'Pasilla'),
-    ('corriente', 'Corriente'),
-    ('cereza', 'Cereza'),
-    ('verde', 'Verde'),
-]
-
 CALIDADES_FLORACION = [
     ('buena', 'Buena'),
     ('regular', 'Regular'),
@@ -18,31 +10,37 @@ CALIDADES_FLORACION = [
     ('excelente', 'Excelente'),
 ]
 
-TIPOS_PLATANO = [
-    ('banano_extra', 'Banano Extra'),
-    ('banano_primera', 'Banano Primera'),
-    ('banano_segunda', 'Banano Segunda'),
-    ('platano_extra', 'Plátano Extra x dedo'),
-    ('platano_segunda', 'Plátano Segunda x dedo'),
-    ('africa_extra', 'África Extra'),
-    ('africa_primera', 'África Primera'),
-    ('africa_segunda', 'África Segunda'),
-    ('dominico_extra', 'Dominico Extra'),
-    ('dominico_primera', 'Dominico Primera'),
-    ('dominico_segunda', 'Dominico Segunda'),
-    ('guineo', 'Guineo'),
-    ('harton_extra', 'Hartón Extra'),
-    ('harton_primera', 'Hartón Primera'),
-    ('harton_segunda', 'Hartón Segunda'),
-    ('murrapo_primera', 'Murrapo Primera'),
-    ('murrapo_segunda', 'Murrapo Segunda'),
-]
-
 PRESENTACIONES_TOSTADO = [
     ('250g', '250 gramos'),
     ('500g', '500 gramos'),
     ('2500g', '2.5 kg'),
 ]
+
+
+class TipoBanano(BaseModel):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+
+    class Meta:
+        db_table = "tipos_banano"
+        verbose_name = "Tipo de Banano"
+        verbose_name_plural = "Tipos de Banano"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+class TipoCafe(BaseModel):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+
+    class Meta:
+        db_table = "tipos_cafe"
+        verbose_name = "Tipo de Café"
+        verbose_name_plural = "Tipos de Café"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
 
 
 class Lote(BaseModel):
@@ -81,8 +79,8 @@ class VentaCafe(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
     kilos = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Kilos")
     cargas = models.DecimalField(max_digits=8, decimal_places=3, verbose_name="Cargas")
-    tipo_cafe = models.CharField(
-        max_length=20, choices=TIPOS_CAFE, db_index=True, verbose_name="Tipo de café"
+    tipo_cafe = models.ForeignKey(
+        TipoCafe, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo de café"
     )
     factor = models.DecimalField(
         max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Factor"
@@ -123,7 +121,8 @@ class VentaCafe(BaseModel):
         verbose_name_plural = "Ventas de Café"
 
     def __str__(self):
-        return f"{self.fecha} — {self.kilos} kg {self.get_tipo_cafe_display()} (${self.valor_neto:,.0f})"
+        tipo = self.tipo_cafe.nombre if self.tipo_cafe_id else "?"
+        return f"{self.fecha} — {self.kilos} kg {tipo} (${self.valor_neto:,.0f})"
 
 
 class VentaCafeTostado(BaseModel):
@@ -225,8 +224,8 @@ class MezclaAbonoFertilizante(BaseModel):
 
 class VentaBanano(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
-    tipo_platano = models.CharField(
-        max_length=30, choices=TIPOS_PLATANO, db_index=True, verbose_name="Tipo"
+    tipo_platano = models.ForeignKey(
+        TipoBanano, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo"
     )
     kilos = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Kilos")
     precio_kilo = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Precio x kilo")
@@ -245,4 +244,5 @@ class VentaBanano(BaseModel):
         verbose_name_plural = "Ventas de Banano"
 
     def __str__(self):
-        return f"{self.fecha} — {self.kilos} kg {self.get_tipo_platano_display()} (${self.valor_total:,.0f})"
+        tipo = self.tipo_platano.nombre if self.tipo_platano_id else "?"
+        return f"{self.fecha} — {self.kilos} kg {tipo} (${self.valor_total:,.0f})"
