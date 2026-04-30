@@ -32,8 +32,7 @@ class LoteSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'abreviatura', 'nombre', 'variedad', 'variedad_nombre',
             'tipo_cultivo', 'año_siembra', 'proxima_renovacion',
-            'num_arboles', 'gramos_abono_palo',
-            'bultos_produccion', 'bultos_urea', 'bultos_dap',
+            'num_arboles', 'bultos_produccion', 'bultos_urea', 'bultos_dap',
             'activo', 'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']

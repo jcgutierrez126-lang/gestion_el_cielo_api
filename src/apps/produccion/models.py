@@ -79,9 +79,6 @@ class Lote(BaseModel):
         max_length=50, blank=True, null=True, verbose_name="Próxima renovación"
     )
     num_arboles = models.IntegerField(default=0, verbose_name="Número de árboles")
-    gramos_abono_palo = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Gramos abono / palo"
-    )
     bultos_produccion = models.DecimalField(
         max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Bultos producción"
     )
