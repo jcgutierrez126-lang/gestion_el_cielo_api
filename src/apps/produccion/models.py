@@ -114,14 +114,14 @@ class VentaCafe(BaseModel):
         max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Precio x carga"
     )
     comprador = models.CharField(max_length=100, verbose_name="Comprador")
-    valor_total = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor total")
+    valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
     deduccion = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0, blank=True, null=True, verbose_name="Deducción"
+        max_digits=20, decimal_places=2, default=0, blank=True, null=True, verbose_name="Deducción"
     )
     retefuente = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0, blank=True, null=True, verbose_name="Retefuente"
+        max_digits=20, decimal_places=2, default=0, blank=True, null=True, verbose_name="Retefuente"
     )
-    valor_neto = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor neto")
+    valor_neto = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor neto")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_cafe", verbose_name="Cuenta destino"
     )
@@ -253,7 +253,7 @@ class VentaBanano(BaseModel):
     )
     kilos = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Kilos")
     precio_kilo = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Precio x kilo")
-    valor_total = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor total")
+    valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_banano", verbose_name="Cuenta destino"
     )
