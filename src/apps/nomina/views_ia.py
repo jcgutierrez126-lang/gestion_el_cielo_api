@@ -216,8 +216,26 @@ class LeerPlanillaDiariaView(APIView):
 
         contenido = imagen.read()
         media_type = imagen.content_type or 'image/jpeg'
-        if media_type not in ('image/jpeg', 'image/png', 'image/webp', 'image/gif'):
-            media_type = 'image/jpeg'
+        SOPORTADOS = ('image/jpeg', 'image/png', 'image/webp', 'image/gif')
+        if media_type not in SOPORTADOS:
+            # Intenta convertir HEIC/HEIF a JPEG si pillow-heif está disponible
+            if media_type in ('image/heic', 'image/heif'):
+                try:
+                    import pillow_heif
+                    from PIL import Image as PILImage
+                    pillow_heif.register_heif_opener()
+                    img = PILImage.open(BytesIO(contenido))
+                    buf = BytesIO()
+                    img.save(buf, format='JPEG', quality=90)
+                    contenido = buf.getvalue()
+                    media_type = 'image/jpeg'
+                except Exception:
+                    return Response(
+                        {'error': 'Formato de imagen no soportado (HEIC). Toma la foto en JPG o PNG.'},
+                        status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    )
+            else:
+                media_type = 'image/jpeg'
 
         imagen_b64 = base64.standard_b64encode(contenido).decode('utf-8')
 
@@ -245,7 +263,23 @@ class LeerPlanillaDiariaView(APIView):
                 ],
             )
 
+            if not message.content:
+                logger.error('Claude devolvió content vacío. stop_reason=%s', message.stop_reason)
+                return Response(
+                    {'error': 'Claude no generó respuesta.', 'detalle': f'stop_reason={message.stop_reason}'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
             raw = message.content[0].text.strip()
+            logger.debug('Claude raw response (primeros 500): %s', raw[:500])
+
+            if not raw:
+                logger.error('Claude devolvió texto vacío. stop_reason=%s', message.stop_reason)
+                return Response(
+                    {'error': 'Claude devolvió una respuesta vacía.', 'detalle': f'stop_reason={message.stop_reason}'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[1]
                 raw = raw.rsplit('```', 1)[0]
@@ -409,8 +443,25 @@ class LeerPlanillaView(APIView):
 
         contenido = imagen.read()
         media_type = imagen.content_type or 'image/jpeg'
-        if media_type not in ('image/jpeg', 'image/png', 'image/webp', 'image/gif'):
-            media_type = 'image/jpeg'
+        SOPORTADOS = ('image/jpeg', 'image/png', 'image/webp', 'image/gif')
+        if media_type not in SOPORTADOS:
+            if media_type in ('image/heic', 'image/heif'):
+                try:
+                    import pillow_heif
+                    from PIL import Image as PILImage
+                    pillow_heif.register_heif_opener()
+                    img = PILImage.open(BytesIO(contenido))
+                    buf = BytesIO()
+                    img.save(buf, format='JPEG', quality=90)
+                    contenido = buf.getvalue()
+                    media_type = 'image/jpeg'
+                except Exception:
+                    return Response(
+                        {'error': 'Formato de imagen no soportado (HEIC). Toma la foto en JPG o PNG.'},
+                        status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    )
+            else:
+                media_type = 'image/jpeg'
 
         imagen_b64 = base64.standard_b64encode(contenido).decode('utf-8')
 
@@ -438,7 +489,22 @@ class LeerPlanillaView(APIView):
                 ],
             )
 
+            if not message.content:
+                logger.error('Claude devolvió content vacío. stop_reason=%s', message.stop_reason)
+                return Response(
+                    {'error': 'Claude no generó respuesta.', 'detalle': f'stop_reason={message.stop_reason}'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
             raw = message.content[0].text.strip()
+            logger.debug('Claude raw response (primeros 500): %s', raw[:500])
+
+            if not raw:
+                logger.error('Claude devolvió texto vacío. stop_reason=%s', message.stop_reason)
+                return Response(
+                    {'error': 'Claude devolvió una respuesta vacía.', 'detalle': f'stop_reason={message.stop_reason}'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
 
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[1]
