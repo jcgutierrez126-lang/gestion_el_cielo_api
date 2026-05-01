@@ -46,10 +46,17 @@ LOTES_ABREV = {
 CODIGOS_LABOR = {
     "R": "recoleccion", "G": "guadana", "A": "abono",
     "B": "banano", "E": "embolsada", "S": "siembra",
-    "C": "cosecha", "V": "varios", "CT": "contrato",
-    "P": "permiso", "N": "nomina", "D": "deshojada",
-    "DC": "deschuponar", "DB": "desbejucar",
+    "C": "cosecha", "V": "varios", "VR": "varios",
+    "CT": "contrato", "P": "permiso", "N": "nomina",
+    "D": "deshojada", "DC": "deschuponar", "DB": "desbejucar",
     "AL": "auxilio_labor", "AT": "auxilio_transporte",
+}
+
+# Correcciones de OCR frecuentes en manuscrito
+OCR_CORRECCIONES_LABOR = {
+    "AR": "VR",   # V se confunde con A en manuscrito
+    "DS": "DB",   # B se confunde con S en manuscrito
+    "DE": "DB",   # variante común
 }
 
 MESES_ES = [
@@ -148,6 +155,7 @@ REGLAS ESTRICTAS:
 - Para lotes: usa estas abreviaturas {LOTES_ABREV} o números {LOTES_FINCA}. Convierte al nombre completo.
   Si el lote está ilegible, en blanco o no aplica (ej: auxilio, nomina), usa null. NUNCA uses "Lote" como valor.
 - Para labores: usa estos códigos {CODIGOS_LABOR}. Convierte al nombre completo.
+- CORRECCIONES OCR FRECUENTES EN MANUSCRITO: La letra "V" se confunde con "A" → si ves código "AR" es probablemente "VR" (varios). La letra "B" se confunde con "S" → si ves "DS" es probablemente "DB" (desbejucar).
 - Para tipo_cobro usa: kilos, jornal, contrato, nomina.
 - Omite los días donde el trabajador no tiene labor registrada.
 - Si ves en observaciones "Gastos varios" con montos (ej: neumático, parchada), inclúyelos en el campo "observaciones" pero NO crees registros de trabajador para ellos.
@@ -473,9 +481,18 @@ def _buscar_empleado(nombre: str):
 def _buscar_tipo_labor(texto: str):
     if not texto:
         return None
-    t = texto.strip()
-    return TipoLabor.objects.filter(abreviatura__iexact=t).first() or \
-           TipoLabor.objects.filter(nombre__icontains=t).first()
+    t = texto.strip().upper()
+    t = OCR_CORRECCIONES_LABOR.get(t, t)
+    t_original = texto.strip()
+    mapped = CODIGOS_LABOR.get(t)
+    if mapped:
+        resultado = TipoLabor.objects.filter(nombre__iexact=mapped).first()
+        if resultado:
+            return resultado
+    return (
+        TipoLabor.objects.filter(abreviatura__iexact=t_original).first() or
+        TipoLabor.objects.filter(nombre__icontains=t_original).first()
+    )
 
 
 def _buscar_tipo_cobro(texto: str):
