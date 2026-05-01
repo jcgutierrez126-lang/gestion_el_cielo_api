@@ -253,6 +253,10 @@ class VentaBanano(BaseModel):
     )
     kilos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Kilos")
     precio_kilo = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Precio x kilo")
+    lote = models.ForeignKey(
+        Lote, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ventas_banano", verbose_name="Lote"
+    )
     valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_banano", verbose_name="Cuenta destino"
