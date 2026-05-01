@@ -1,6 +1,6 @@
 from django.db import models
 from cieloapi.base_model import BaseModel
-from apps.finanzas.models import Cuenta
+from apps.finanzas.models import Cuenta, Proveedor
 
 
 CALIDADES_FLORACION = [
@@ -268,6 +268,10 @@ class VentaBanano(BaseModel):
     valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_banano", verbose_name="Cuenta destino"
+    )
+    proveedor = models.ForeignKey(
+        Proveedor, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ventas_banano", verbose_name="Proveedor / Cooperativa"
     )
     facturado_a = models.CharField(
         max_length=100, blank=True, null=True, verbose_name="Facturado a"

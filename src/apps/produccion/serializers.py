@@ -75,6 +75,7 @@ class VentaBananoSerializer(serializers.ModelSerializer):
     tipo_nombre = serializers.CharField(source='tipo_platano.nombre', read_only=True)
     lote_nombre = serializers.CharField(source='lote.nombre', read_only=True, default=None)
     lote_abreviatura = serializers.CharField(source='lote.abreviatura', read_only=True, default=None)
+    proveedor_nombre = serializers.CharField(source='proveedor.nombre', read_only=True, default=None)
 
     class Meta:
         model = VentaBanano
@@ -83,6 +84,7 @@ class VentaBananoSerializer(serializers.ModelSerializer):
             'lote', 'lote_nombre', 'lote_abreviatura',
             'kilos', 'precio_kilo', 'valor_total',
             'cuenta_destino', 'cuenta_destino_nombre',
+            'proveedor', 'proveedor_nombre',
             'facturado_a', 'observaciones',
             'created_at', 'updated_at',
         ]
