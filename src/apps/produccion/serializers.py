@@ -75,13 +75,17 @@ class VentaBananoSerializer(serializers.ModelSerializer):
     tipo_nombre = serializers.CharField(source='tipo_platano.nombre', read_only=True)
     lote_nombre = serializers.CharField(source='lote.nombre', read_only=True, default=None)
     lote_abreviatura = serializers.CharField(source='lote.abreviatura', read_only=True, default=None)
+    numero_carga = serializers.SerializerMethodField(read_only=True)
+
+    def get_numero_carga(self, obj):
+        return obj.numero_carga
 
     class Meta:
         model = VentaBanano
         fields = [
             'id', 'fecha', 'tipo_platano', 'tipo_nombre',
             'lote', 'lote_nombre', 'lote_abreviatura',
-            'kilos', 'precio_kilo', 'valor_total',
+            'kilos', 'numero_carga', 'precio_kilo', 'valor_total',
             'cuenta_destino', 'cuenta_destino_nombre',
             'facturado_a', 'observaciones',
             'created_at', 'updated_at',
