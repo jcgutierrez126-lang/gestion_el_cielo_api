@@ -71,7 +71,7 @@ TIPOS_MATERIA_LOTE = [
 
 class Lote(BaseModel):
     abreviatura = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name="Abreviatura")
-    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del lote")
+    nombre = models.CharField(max_length=100, verbose_name="Nombre del lote")
     tipo_cultivo = models.CharField(
         max_length=10, choices=TIPOS_CULTIVO_LOTE, blank=True, null=True, verbose_name="Tipo de cultivo"
     )
