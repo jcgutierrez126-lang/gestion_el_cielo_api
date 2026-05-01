@@ -41,14 +41,14 @@ class Empleado(BaseModel):
     telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
     labor = models.CharField(max_length=100, blank=True, null=True, verbose_name="Labor principal")
     jornal = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Jornal diario"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Jornal diario"
     )
     fecha_ingreso = models.DateField(blank=True, null=True, verbose_name="Fecha de ingreso")
     salario_mensual = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Salario mensual"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Salario mensual"
     )
     salario_semanal = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Salario semanal"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Salario semanal"
     )
     eps = models.CharField(max_length=100, blank=True, null=True, verbose_name="EPS")
     pension = models.CharField(max_length=100, blank=True, null=True, verbose_name="Pensión")
@@ -87,18 +87,18 @@ class ControlSemanal(BaseModel):
         null=True, blank=True, verbose_name="Lote"
     )
     kilos = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Kilos"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Kilos"
     )
     jornales = models.DecimalField(
-        max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Jornales"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Jornales"
     )
     semana_ref = models.CharField(max_length=150, blank=True, default='', db_index=True, verbose_name='Semana referencia')
     dia = models.CharField(max_length=20, blank=True, null=True, verbose_name='Día')
     fecha = models.DateField(null=True, blank=True, db_index=True, verbose_name='Fecha')
     costo_unidad = models.DecimalField(
-        max_digits=12, decimal_places=5, default=0, verbose_name="Costo x kilo / jornal"
+        max_digits=20, decimal_places=5, default=0, verbose_name="Costo x kilo / jornal"
     )
-    valor = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor total")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
     observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
     es_vale = models.BooleanField(
         default=False,
@@ -122,14 +122,14 @@ class ControlSemanal(BaseModel):
 
 class PrestamoEmpleado(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha préstamo")
-    valor = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
     empleado = models.ForeignKey(
         Empleado, on_delete=models.PROTECT,
         related_name="prestamos", verbose_name="Empleado"
     )
     concepto = models.CharField(max_length=300, verbose_name="Concepto")
     saldo = models.DecimalField(
-        max_digits=12, decimal_places=2, verbose_name="Saldo pendiente"
+        max_digits=20, decimal_places=2, verbose_name="Saldo pendiente"
     )
 
     class Meta:
@@ -154,7 +154,7 @@ class AbonoPrestamo(BaseModel):
         related_name="abonos", verbose_name="Préstamo"
     )
     fecha = models.DateField(verbose_name="Fecha abono")
-    valor = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
     nota = models.CharField(max_length=300, blank=True, null=True, verbose_name="Nota")
 
     class Meta:

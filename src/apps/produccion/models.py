@@ -80,13 +80,13 @@ class Lote(BaseModel):
     )
     num_arboles = models.IntegerField(default=0, verbose_name="Número de árboles")
     bultos_produccion = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Bultos producción"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Bultos producción"
     )
     bultos_urea = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Bultos urea"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Bultos urea"
     )
     bultos_dap = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Bultos DAP"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Bultos DAP"
     )
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
@@ -101,17 +101,17 @@ class Lote(BaseModel):
 
 class VentaCafe(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
-    kilos = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Kilos")
-    cargas = models.DecimalField(max_digits=8, decimal_places=3, verbose_name="Cargas")
+    kilos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Kilos")
+    cargas = models.DecimalField(max_digits=20, decimal_places=3, verbose_name="Cargas")
     tipo_cafe = models.ForeignKey(
         TipoCafe, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo de café"
     )
     factor = models.DecimalField(
-        max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Factor"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Factor"
     )
-    precio_kilo = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio x kilo")
+    precio_kilo = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Precio x kilo")
     precio_carga = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Precio x carga"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Precio x carga"
     )
     comprador = models.CharField(max_length=100, verbose_name="Comprador")
     valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
@@ -129,14 +129,14 @@ class VentaCafe(BaseModel):
         max_length=100, blank=True, null=True, verbose_name="Facturado a"
     )
     conversion_cereza_seco = models.DecimalField(
-        max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Conversión cereza/seco"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Conversión cereza/seco"
     )
     beneficio = models.CharField(max_length=100, blank=True, null=True, verbose_name="Beneficio")
     transportador = models.CharField(
         max_length=100, blank=True, null=True, verbose_name="Transportador"
     )
     valor_transporte = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Valor transporte"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Valor transporte"
     )
 
     class Meta:
@@ -162,7 +162,7 @@ class VentaCafeTostado(BaseModel):
         max_length=10, choices=TIPOS_MOLIDO, verbose_name="Molido o Grano"
     )
     seleccionado = models.BooleanField(default=False, verbose_name="Seleccionado")
-    valor = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_cafe_tostado",
         verbose_name="Cuenta destino"
@@ -211,10 +211,10 @@ class MezclaAbono(BaseModel):
     )
     num_arboles = models.IntegerField(blank=True, null=True, verbose_name="Número de árboles")
     gramos_por_arbol = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True, verbose_name="Gramos por árbol"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Gramos por árbol"
     )
     costo_total = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Costo total"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Costo total"
     )
 
     class Meta:
@@ -232,9 +232,9 @@ class MezclaAbonoFertilizante(BaseModel):
         related_name="fertilizantes", verbose_name="Mezcla"
     )
     fertilizante = models.CharField(max_length=100, verbose_name="Fertilizante")
-    num_bultos = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Número de bultos")
+    num_bultos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Número de bultos")
     precio_bulto = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Precio x bulto"
+        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Precio x bulto"
     )
 
     class Meta:
@@ -251,8 +251,8 @@ class VentaBanano(BaseModel):
     tipo_platano = models.ForeignKey(
         TipoBanano, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo"
     )
-    kilos = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Kilos")
-    precio_kilo = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Precio x kilo")
+    kilos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Kilos")
+    precio_kilo = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Precio x kilo")
     valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_banano", verbose_name="Cuenta destino"

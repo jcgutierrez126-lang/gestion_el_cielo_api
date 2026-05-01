@@ -44,7 +44,7 @@ class Cuenta(BaseModel):
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
     tipo = models.CharField(max_length=20, choices=TIPOS, verbose_name="Tipo")
     saldo_inicial = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0, verbose_name="Saldo inicial"
+        max_digits=20, decimal_places=2, default=0, verbose_name="Saldo inicial"
     )
 
     class Meta:
@@ -101,10 +101,10 @@ class Egreso(BaseModel):
     nombre = models.CharField(max_length=200, verbose_name="Nombre / Concepto")
     descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
     cantidad = models.DecimalField(
-        max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Cantidad"
+        max_digits=20, decimal_places=3, blank=True, null=True, verbose_name="Cantidad"
     )
     unidad = models.CharField(max_length=50, blank=True, null=True, verbose_name="Unidad")
-    valor = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
     cuenta = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="egresos", verbose_name="Cuenta"
     )
@@ -120,10 +120,10 @@ class Egreso(BaseModel):
     )
     facturado_a = models.CharField(max_length=100, blank=True, null=True, verbose_name="Facturado a")
     abono_deuda = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0, verbose_name="Abono a deuda"
+        max_digits=20, decimal_places=2, default=0, verbose_name="Abono a deuda"
     )
     restante = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0, verbose_name="Restante"
+        max_digits=20, decimal_places=2, default=0, verbose_name="Restante"
     )
     estado = models.CharField(
         max_length=20, choices=ESTADOS, default='pagada', verbose_name="Estado"
@@ -144,7 +144,7 @@ class Egreso(BaseModel):
 class Ingreso(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
     descripcion = models.CharField(max_length=300, verbose_name="Descripción")
-    valor = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ingresos", verbose_name="Cuenta destino"
     )
@@ -169,7 +169,7 @@ class Transaccion(BaseModel):
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="entradas", verbose_name="Cuenta destino"
     )
-    valor = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
     observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
 
     class Meta:
