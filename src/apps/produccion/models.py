@@ -253,7 +253,7 @@ class VentaBanano(BaseModel):
     )
     kilos = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Kilos")
     precio_kilo = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Precio x kilo")
-    valor_total = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor total")
+    valor_total = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor total")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_banano", verbose_name="Cuenta destino"
     )
