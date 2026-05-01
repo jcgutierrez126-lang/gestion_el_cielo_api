@@ -266,12 +266,6 @@ class VentaBanano(BaseModel):
     )
     observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
 
-    @property
-    def numero_carga(self):
-        if self.kilos is None:
-            return None
-        return round(self.kilos / 125, 4)
-
     class Meta:
         db_table = "ventas_banano"
         verbose_name = "Venta de Banano"
