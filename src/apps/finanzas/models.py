@@ -47,6 +47,12 @@ class Cuenta(BaseModel):
     saldo_inicial = models.DecimalField(
         max_digits=20, decimal_places=2, default=0, verbose_name="Saldo inicial"
     )
+    numero_cuenta = models.CharField(
+        max_length=50, blank=True, null=True, verbose_name="Número de cuenta"
+    )
+    banco = models.CharField(
+        max_length=100, blank=True, null=True, verbose_name="Banco / Entidad"
+    )
 
     class Meta:
         db_table = "cuentas"

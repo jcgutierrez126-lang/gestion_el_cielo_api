@@ -10,7 +10,7 @@ class CuentaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cuenta
-        fields = ['id', 'nombre', 'tipo', 'saldo', 'activa', 'created_at', 'updated_at']
+        fields = ['id', 'nombre', 'tipo', 'saldo', 'activa', 'numero_cuenta', 'banco', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 

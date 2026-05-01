@@ -316,6 +316,9 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
                                 "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
                                 "{\n"
                                 '  "fecha": "YYYY-MM-DD",\n'
+                                '  "finca": "nombre de la finca (campo FINCA, solo el nombre sin el número, ej: LA INMACULADA)",\n'
+                                '  "numero_cuenta": "número de cuenta bancaria del campo Forma de Pago (solo dígitos)",\n'
+                                '  "banco": "nombre del banco del campo Forma de Pago (ej: BANCOLOMBIA)",\n'
                                 '  "items": [\n'
                                 '    {"descripcion": "texto exacto de la columna Descripción", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
                                 '  ],\n'
@@ -325,7 +328,8 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
                                 "}\n"
                                 "La fecha es 'Fecha Liquidación', formato YYYY-MM-DD. "
                                 "Columna Cantidad = kilos, Valor Unitario = precio_kilo. "
-                                "Los números sin puntos de miles ni símbolos de moneda."
+                                "Los números sin puntos de miles ni símbolos de moneda. "
+                                "Si no encuentras finca, numero_cuenta o banco, usa null."
                             ),
                         },
                     ],
