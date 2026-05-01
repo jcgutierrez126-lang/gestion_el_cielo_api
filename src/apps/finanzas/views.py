@@ -1,13 +1,15 @@
-from rest_framework import viewsets, filters
+from datetime import date
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Sum, Count, Avg
 from django.db.models.functions import TruncMonth
-from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
+from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion, InversionCDT
 from .serializers import (
     CiudadSerializer, CuentaSerializer, ProveedorSerializer, EgresoSerializer,
-    IngresoSerializer, TransaccionSerializer, ObservacionSerializer,
+    IngresoSerializer, TransaccionSerializer, ObservacionSerializer, InversionCDTSerializer,
 )
 
 
@@ -164,6 +166,61 @@ class ObservacionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__lte=fecha_hasta)
 
         return qs.order_by('-fecha')
+
+
+class InversionCDTViewSet(viewsets.ModelViewSet):
+    serializer_class = InversionCDTSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['fecha_inicio', 'fecha_vencimiento', 'monto', 'estado']
+
+    def get_queryset(self):
+        qs = InversionCDT.objects.select_related('cuenta_origen').all()
+        estado = self.request.query_params.get('estado')
+        if estado:
+            qs = qs.filter(estado=estado)
+        return qs.order_by('-fecha_inicio')
+
+    @action(detail=True, methods=['post'])
+    def liquidar(self, request, pk=None):
+        cdt = self.get_object()
+        if cdt.estado == 'liquidado':
+            return Response({'error': 'Este CDT ya fue liquidado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rendimiento = request.data.get('rendimiento_real')
+        fecha_liq = request.data.get('fecha_liquidacion') or date.today().isoformat()
+
+        if rendimiento is None:
+            rendimiento = cdt.rendimiento_proyectado
+
+        total = cdt.monto + rendimiento
+
+        Ingreso.objects.create(
+            fecha=fecha_liq,
+            descripcion=f"Liquidación CDT {cdt.entidad} — rendimiento",
+            valor=rendimiento,
+            cuenta_destino=cdt.cuenta_origen,
+            origen=f"CDT #{cdt.id} — {cdt.entidad}",
+        )
+        Ingreso.objects.create(
+            fecha=fecha_liq,
+            descripcion=f"Liquidación CDT {cdt.entidad} — capital",
+            valor=cdt.monto,
+            cuenta_destino=cdt.cuenta_origen,
+            origen=f"CDT #{cdt.id} — {cdt.entidad}",
+        )
+
+        cdt.estado = 'liquidado'
+        cdt.rendimiento_real = rendimiento
+        cdt.fecha_liquidacion = fecha_liq
+        cdt.save(update_fields=['estado', 'rendimiento_real', 'fecha_liquidacion'])
+
+        return Response({
+            'ok': True,
+            'rendimiento': str(rendimiento),
+            'total': str(total),
+        })
 
 
 class ResumenView(APIView):

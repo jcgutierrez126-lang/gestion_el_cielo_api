@@ -40,6 +40,7 @@ class Cuenta(BaseModel):
         ('prestamo', 'Préstamo'),
         ('agencia', 'Agencia / Cooperativa'),
         ('dividendos', 'Dividendos'),
+        ('inversion', 'Inversión / CDT'),
     ]
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
     tipo = models.CharField(max_length=20, choices=TIPOS, verbose_name="Tipo")
@@ -180,6 +181,49 @@ class Transaccion(BaseModel):
     def __str__(self):
         origen = self.cuenta_origen.nombre if self.cuenta_origen else "—"
         return f"{self.fecha} | {origen} → {self.cuenta_destino.nombre} (${self.valor:,.0f})"
+
+
+class InversionCDT(BaseModel):
+    ESTADOS = [
+        ('activo', 'Activo'),
+        ('liquidado', 'Liquidado'),
+        ('renovado', 'Renovado'),
+    ]
+    entidad = models.CharField(max_length=150, verbose_name="Entidad bancaria")
+    monto = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Monto invertido")
+    tasa_ea = models.DecimalField(max_digits=8, decimal_places=4, verbose_name="Tasa E.A. (%)")
+    fecha_inicio = models.DateField(verbose_name="Fecha inicio")
+    fecha_vencimiento = models.DateField(verbose_name="Fecha vencimiento")
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='activo', db_index=True, verbose_name="Estado")
+    cuenta_origen = models.ForeignKey(
+        Cuenta, on_delete=models.PROTECT, related_name="cdts",
+        verbose_name="Cuenta origen"
+    )
+    rendimiento_real = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True, verbose_name="Rendimiento real"
+    )
+    fecha_liquidacion = models.DateField(null=True, blank=True, verbose_name="Fecha liquidación")
+    observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
+
+    class Meta:
+        db_table = "inversiones_cdt"
+        verbose_name = "Inversión CDT"
+        verbose_name_plural = "Inversiones CDT"
+        ordering = ['-fecha_inicio']
+
+    @property
+    def plazo_dias(self):
+        return (self.fecha_vencimiento - self.fecha_inicio).days
+
+    @property
+    def rendimiento_proyectado(self):
+        from decimal import Decimal
+        tasa = self.tasa_ea / Decimal('100')
+        dias = self.plazo_dias
+        return round(self.monto * ((1 + tasa) ** (Decimal(str(dias)) / Decimal('365')) - 1), 2)
+
+    def __str__(self):
+        return f"CDT {self.entidad} — ${self.monto:,.0f} ({self.fecha_inicio} → {self.fecha_vencimiento})"
 
 
 class Observacion(BaseModel):
