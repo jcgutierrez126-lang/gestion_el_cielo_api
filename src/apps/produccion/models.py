@@ -110,7 +110,7 @@ class Lote(BaseModel):
 class VentaCafe(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
     kilos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Kilos")
-    cargas = models.DecimalField(max_digits=20, decimal_places=3, verbose_name="Cargas")
+    cargas = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Cargas")
     tipo_cafe = models.ForeignKey(
         TipoCafe, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo de café"
     )
