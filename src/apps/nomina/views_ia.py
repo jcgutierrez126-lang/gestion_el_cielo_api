@@ -521,6 +521,7 @@ class GuardarPlanillaView(APIView):
         semana_ref = datos.get('semana_ref', '')
         fecha_inicio_str = datos.get('fecha_inicio', '')
         registros_raw = datos.get('registros', [])
+        valor_jornal_global = datos.get('valor_jornal')
 
         try:
             fecha_lunes = date.fromisoformat(fecha_inicio_str)
@@ -540,6 +541,7 @@ class GuardarPlanillaView(APIView):
             fecha_str = r.get('fecha', '') or fecha_inicio_str
             cantidad = r.get('cantidad')
             valor = r.get('valor')
+            costo_unidad = r.get('valor_jornal') or valor_jornal_global or 0
 
             empleado = _buscar_empleado(nombre)
             tipo_labor = _buscar_tipo_labor(labor_txt)
@@ -578,7 +580,7 @@ class GuardarPlanillaView(APIView):
                 lote=lote,
                 kilos=kilos,
                 jornales=jornales,
-                costo_unidad=0,
+                costo_unidad=costo_unidad,
                 valor=valor or 0,
             )
             creados.append(nombre)
