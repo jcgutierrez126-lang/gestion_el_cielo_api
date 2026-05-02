@@ -312,24 +312,38 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
                         {
                             "type": "text",
                             "text": (
-                                "Esta es una factura de liquidación de banano de la Cooperativa COMSAB (Colombia).\n"
-                                "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
+                                "Eres un extractor de datos de facturas de liquidación de banano de COMSAB (Cooperativa Agromultiactiva San Bartolo, Colombia).\n"
+                                "El formato de este documento es SIEMPRE el mismo. Extrae los campos según estas reglas exactas:\n\n"
+                                "REGLAS DE EXTRACCIÓN:\n"
+                                "- 'fecha': busca la línea 'Fecha Liquidación: DD/MM/YYYY' → convierte a YYYY-MM-DD\n"
+                                "- 'finca': busca la línea 'FINCA: N – NOMBRE' o 'FINCA: N - NOMBRE' → extrae SOLO el nombre (sin el número ni guión)\n"
+                                "- 'numero_cuenta': busca la línea 'Forma de Pago: Cuenta: XXXXXXXXXX' → extrae SOLO los dígitos de la cuenta\n"
+                                "- 'banco': busca 'Banco: NOMBRE' en la línea de Forma de Pago → extrae el nombre del banco\n"
+                                "- 'items': cada fila de la tabla con Código, Descripción, U.Medida=KILOS, Cantidad, Valor Unitario, Valor Total\n"
+                                "  → 'descripcion' = texto exacto de la columna Descripción\n"
+                                "  → 'kilos' = valor de columna Cantidad (número decimal)\n"
+                                "  → 'precio_kilo' = valor de columna Valor Unitario (número entero)\n"
+                                "  → 'valor_total' = valor de columna Valor Total (número entero)\n"
+                                "  → EXCLUYE filas de deducciones (ASOFRUCOL, APORTES, etc.)\n"
+                                "- 'deducciones': filas con valor negativo debajo de 'Total Pagos'\n"
+                                "  → 'concepto' = texto descriptivo, 'valor' = número POSITIVO (sin signo negativo)\n"
+                                "- 'total_pagos': valor de la línea 'Total Pagos'\n"
+                                "- 'total_a_pagar': valor de la línea 'Total a Pagar'\n\n"
+                                "Responde SOLO con JSON válido, sin texto ni markdown:\n"
                                 "{\n"
                                 '  "fecha": "YYYY-MM-DD",\n'
-                                '  "finca": "nombre de la finca (campo FINCA, solo el nombre sin el número, ej: LA INMACULADA)",\n'
-                                '  "numero_cuenta": "número de cuenta bancaria del campo Forma de Pago (solo dígitos)",\n'
-                                '  "banco": "nombre del banco del campo Forma de Pago (ej: BANCOLOMBIA)",\n'
+                                '  "finca": "LA INMACULADA",\n'
+                                '  "numero_cuenta": "02945202842",\n'
+                                '  "banco": "BANCOLOMBIA",\n'
                                 '  "items": [\n'
-                                '    {"descripcion": "texto exacto de la columna Descripción", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
+                                '    {"descripcion": "BANANO EXTRA", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
                                 '  ],\n'
-                                '  "deducciones": [{"concepto": "nombre exacto", "valor": 2341}],\n'
+                                '  "deducciones": [{"concepto": "ASOFRUCOL DESCUENTO ASOFRUCOL", "valor": 2341}],\n'
                                 '  "total_pagos": 2256418,\n'
                                 '  "total_a_pagar": 2208949\n'
                                 "}\n"
-                                "La fecha es 'Fecha Liquidación', formato YYYY-MM-DD. "
-                                "Columna Cantidad = kilos, Valor Unitario = precio_kilo. "
-                                "Los números sin puntos de miles ni símbolos de moneda. "
-                                "Si no encuentras finca, numero_cuenta o banco, usa null."
+                                "Los números sin puntos de miles ni símbolos de moneda ($). "
+                                "Si no encuentras un campo, usa null."
                             ),
                         },
                     ],
