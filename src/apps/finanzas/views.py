@@ -239,10 +239,8 @@ class ResumenView(APIView):
                 if row['total']
             }
 
+        # Ingresos = fuente de verdad para todo: manuales + ventas (sincronizadas vía signals)
         ing_map      = _agg(Ingreso.objects.all(),                                       'cuenta_destino_id', 'valor')
-        cafe_map     = _agg(VentaCafe.objects.all(),                                     'cuenta_destino_id', 'valor_neto')
-        tostado_map  = _agg(VentaCafeTostado.objects.all(),                              'cuenta_destino_id', 'valor')
-        banano_map   = _agg(VentaBanano.objects.all(),                                   'cuenta_destino_id', 'valor_total')
         egr_map      = _agg(Egreso.objects.all(),                                        'cuenta_id',         'valor')
         # Pagos = Transacciones con cuenta_origen nula (pagos externos entrantes)
         pagos_map    = _agg(Transaccion.objects.filter(cuenta_origen__isnull=True),      'cuenta_destino_id', 'valor')
@@ -258,21 +256,17 @@ class ResumenView(APIView):
         for c in Cuenta.objects.filter(status=True).order_by('nombre'):
             cid = c.id
             ingresos_c  = D(str(ing_map.get(cid, 0)))
-            cafe_c      = D(str(cafe_map.get(cid, 0))) + D(str(tostado_map.get(cid, 0)))
-            banano_c    = D(str(banano_map.get(cid, 0)))
             egresos_c   = D(str(egr_map.get(cid, 0)))
             pagos_c     = D(str(pagos_map.get(cid, 0)))
             from_c      = D(str(from_map.get(cid, 0)))
             to_c        = D(str(to_map.get(cid, 0)))
-            saldo_c     = c.saldo_inicial + ingresos_c + cafe_c + banano_c - egresos_c + pagos_c + from_c - to_c
+            saldo_c     = c.saldo_inicial + ingresos_c - egresos_c + pagos_c + from_c - to_c
 
             cuentas.append({
                 'nombre':   c.nombre,
                 'tipo':     c.tipo,
                 'saldo':    str(saldo_c),
                 'ingresos': str(ingresos_c),
-                'cafe':     str(cafe_c),
-                'banano':   str(banano_c),
                 'egresos':  str(egresos_c),
                 'pagos':    str(pagos_c),
                 'from':     str(from_c),
@@ -300,11 +294,8 @@ class ResumenView(APIView):
         )
 
         # ── KPIs financieros ──────────────────────────────────────────────────
-        total_ingresos = (
-            D(str(ingresos_agg['total'] or 0))
-            + D(str(cafe_agg['total_valor'] or 0))
-            + D(str(banano_agg['total_valor'] or 0))
-        )
+        # Ingresos es la fuente única de verdad (incluye ventas vía signals)
+        total_ingresos = D(str(ingresos_agg['total'] or 0))
         total_costos = (
             D(str(egresos_agg['total'] or 0))
             + D(str(nomina_agg['total'] or 0))
