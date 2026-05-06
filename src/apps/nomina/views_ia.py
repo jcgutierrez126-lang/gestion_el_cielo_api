@@ -259,7 +259,7 @@ class LeerPlanillaDiariaView(APIView):
             client = anthropic.Anthropic(api_key=api_key)
             message = _claude_create(
                 client,
-                model='claude-sonnet-4-6',
+                model='claude-haiku-4-5-20251001',
                 max_tokens=8192,
                 system=SYSTEM_PROMPT_DIARIA,
                 messages=[
@@ -486,7 +486,7 @@ class LeerPlanillaView(APIView):
             client = anthropic.Anthropic(api_key=api_key)
             message = _claude_create(
                 client,
-                model='claude-sonnet-4-6',
+                model='claude-haiku-4-5-20251001',
                 max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 messages=[
