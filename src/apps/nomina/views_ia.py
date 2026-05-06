@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import logging
+import time
 from datetime import date, timedelta
 from io import BytesIO
 
@@ -16,6 +17,21 @@ from .models import Empleado, TipoLabor, TipoCobro, ControlSemanal
 from apps.produccion.models import Lote
 
 logger = logging.getLogger(__name__)
+
+
+def _claude_create(client, max_retries=3, **kwargs):
+    """Llama a client.messages.create con reintentos en caso de sobrecarga (529)."""
+    for attempt in range(1, max_retries + 1):
+        try:
+            return client.messages.create(**kwargs)
+        except anthropic.APIStatusError as e:
+            if e.status_code == 529 and attempt < max_retries:
+                wait = 5 * attempt
+                logger.warning('Claude sobrecargado (529), reintento %d/%d en %ds', attempt, max_retries, wait)
+                time.sleep(wait)
+            else:
+                raise
+
 
 TIPOS_LABOR_VALIDOS = [
     'recoleccion', 'guadana', 'abono', 'varios', 'banano',
@@ -241,7 +257,8 @@ class LeerPlanillaDiariaView(APIView):
 
         try:
             client = anthropic.Anthropic(api_key=api_key)
-            message = client.messages.create(
+            message = _claude_create(
+                client,
                 model='claude-sonnet-4-6',
                 max_tokens=8192,
                 system=SYSTEM_PROMPT_DIARIA,
@@ -467,7 +484,8 @@ class LeerPlanillaView(APIView):
 
         try:
             client = anthropic.Anthropic(api_key=api_key)
-            message = client.messages.create(
+            message = _claude_create(
+                client,
                 model='claude-sonnet-4-6',
                 max_tokens=4096,
                 system=SYSTEM_PROMPT,
