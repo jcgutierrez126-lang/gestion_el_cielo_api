@@ -11,12 +11,12 @@ from django.db.models import Sum
 from django.db.models.functions import TruncWeek, TruncMonth, TruncYear
 from .models import (
     TipoBanano, TipoCafe, VariedadLote,
-    Lote, VentaCafe, VentaCafeTostado, VentaBanano,
+    Lote, VentaCafe, VentaBanano,
     Floracion, MezclaAbono, Observacion,
 )
 from .serializers import (
     TipoBananoSerializer, TipoCafeSerializer, VariedadLoteSerializer,
-    LoteSerializer, VentaCafeSerializer, VentaCafeTostadoSerializer,
+    LoteSerializer, VentaCafeSerializer,
     VentaBananoSerializer, FloracionSerializer, MezclaAbonoSerializer,
     ObservacionSerializer,
 )
@@ -209,31 +209,6 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
             created = [s.save() for s in serializers_list]
 
         return Response(VentaCafeSerializer(created, many=True).data, status=201)
-
-
-class VentaCafeTostadoViewSet(viewsets.ModelViewSet):
-    serializer_class = VentaCafeTostadoSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['cliente']
-    ordering_fields = ['fecha_venta', 'valor', 'presentacion', 'created_at']
-
-    def get_queryset(self):
-        qs = VentaCafeTostado.objects.select_related('cuenta_destino').all()
-        p = self.request.query_params
-
-        fecha_desde = p.get('fecha_desde')
-        fecha_hasta = p.get('fecha_hasta')
-        presentacion = p.get('presentacion')
-
-        if fecha_desde:
-            qs = qs.filter(fecha_venta__gte=fecha_desde)
-        if fecha_hasta:
-            qs = qs.filter(fecha_venta__lte=fecha_hasta)
-        if presentacion:
-            qs = qs.filter(presentacion=presentacion)
-
-        return qs.order_by('-fecha_venta')
 
 
 class VentaBananoViewSet(viewsets.ModelViewSet):

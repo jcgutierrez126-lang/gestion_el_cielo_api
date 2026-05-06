@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     TipoBanano, TipoCafe, VariedadLote,
-    Lote, VentaCafe, VentaCafeTostado, VentaBanano,
+    Lote, VentaCafe, VentaBanano,
     Floracion, MezclaAbono, MezclaAbonoFertilizante, Observacion,
 )
 
@@ -52,20 +52,6 @@ class VentaCafeSerializer(serializers.ModelSerializer):
             'facturado_a', 'conversion_cereza_seco',
             'beneficio', 'transportador', 'valor_transporte',
             'created_at', 'updated_at',
-        ]
-        read_only_fields = ['created_at', 'updated_at']
-
-
-class VentaCafeTostadoSerializer(serializers.ModelSerializer):
-    cuenta_destino_nombre = serializers.CharField(source='cuenta_destino.nombre', read_only=True)
-
-    class Meta:
-        model = VentaCafeTostado
-        fields = [
-            'id', 'fecha_venta', 'cliente', 'cantidad', 'presentacion',
-            'tipo_cafe', 'seleccionado', 'valor',
-            'cuenta_destino', 'cuenta_destino_nombre',
-            'fecha_pago', 'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
 

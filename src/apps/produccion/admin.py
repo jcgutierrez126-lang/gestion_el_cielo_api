@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     TipoBanano, TipoCafe,
-    Lote, VentaCafe, VentaCafeTostado, Floracion, MezclaAbono, MezclaAbonoFertilizante, VentaBanano,
+    Lote, VentaCafe, Floracion, MezclaAbono, MezclaAbonoFertilizante, VentaBanano,
 )
 
 
@@ -32,14 +32,6 @@ class VentaCafeAdmin(admin.ModelAdmin):
     list_filter = ("tipo_cafe", "comprador")
     search_fields = ("comprador", "facturado_a")
     date_hierarchy = "fecha"
-
-
-@admin.register(VentaCafeTostado)
-class VentaCafeTostadoAdmin(admin.ModelAdmin):
-    list_display = ("fecha_venta", "cliente", "presentacion", "tipo_cafe", "cantidad", "valor")
-    list_filter = ("presentacion", "tipo_cafe", "seleccionado")
-    search_fields = ("cliente",)
-    date_hierarchy = "fecha_venta"
 
 
 @admin.register(Floracion)

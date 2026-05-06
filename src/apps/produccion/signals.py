@@ -31,19 +31,6 @@ def _sync_ingreso_banano(venta):
     Ingreso.objects.update_or_create(origen=origen, defaults=defaults)
 
 
-def _sync_ingreso_tostado(venta):
-    origen = f"venta_tostado:{venta.id}"
-    descripcion = f"Venta café tostado — {venta.get_presentacion_display()} | {venta.cliente or 'Sin cliente'}"
-    defaults = {
-        "fecha": venta.fecha_venta,
-        "descripcion": descripcion,
-        "valor": venta.valor,
-        "cuenta_destino": venta.cuenta_destino,
-        "origen": origen,
-    }
-    Ingreso.objects.update_or_create(origen=origen, defaults=defaults)
-
-
 @receiver(post_save, sender="produccion.VentaCafe")
 def on_venta_cafe_save(sender, instance, **kwargs):
     _sync_ingreso_cafe(instance)
@@ -52,11 +39,6 @@ def on_venta_cafe_save(sender, instance, **kwargs):
 @receiver(post_save, sender="produccion.VentaBanano")
 def on_venta_banano_save(sender, instance, **kwargs):
     _sync_ingreso_banano(instance)
-
-
-@receiver(post_save, sender="produccion.VentaCafeTostado")
-def on_venta_tostado_save(sender, instance, **kwargs):
-    _sync_ingreso_tostado(instance)
 
 
 @receiver(post_delete, sender="produccion.VentaCafe")
@@ -69,6 +51,3 @@ def on_venta_banano_delete(sender, instance, **kwargs):
     Ingreso.objects.filter(origen=f"venta_banano:{instance.id}").delete()
 
 
-@receiver(post_delete, sender="produccion.VentaCafeTostado")
-def on_venta_tostado_delete(sender, instance, **kwargs):
-    Ingreso.objects.filter(origen=f"venta_tostado:{instance.id}").delete()

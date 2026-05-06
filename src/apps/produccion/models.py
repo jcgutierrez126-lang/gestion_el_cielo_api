@@ -10,13 +10,6 @@ CALIDADES_FLORACION = [
     ('excelente', 'Excelente'),
 ]
 
-PRESENTACIONES_TOSTADO = [
-    ('250g', '250 gramos'),
-    ('500g', '500 gramos'),
-    ('2500g', '2.5 kg'),
-]
-
-
 class TipoBanano(BaseModel):
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
 
@@ -155,35 +148,6 @@ class VentaCafe(BaseModel):
     def __str__(self):
         tipo = self.tipo_cafe.nombre if self.tipo_cafe_id else "?"
         return f"{self.fecha} — {self.kilos} kg {tipo} (${self.valor_neto:,.0f})"
-
-
-class VentaCafeTostado(BaseModel):
-    TIPOS_MOLIDO = [('molido', 'Molido'), ('grano', 'Grano')]
-
-    fecha_venta = models.DateField(db_index=True, verbose_name="Fecha venta")
-    cliente = models.CharField(max_length=200, blank=True, null=True, verbose_name="Cliente")
-    cantidad = models.IntegerField(verbose_name="Cantidad (unidades)")
-    presentacion = models.CharField(
-        max_length=10, choices=PRESENTACIONES_TOSTADO, verbose_name="Presentación"
-    )
-    tipo_cafe = models.CharField(
-        max_length=10, choices=TIPOS_MOLIDO, verbose_name="Molido o Grano"
-    )
-    seleccionado = models.BooleanField(default=False, verbose_name="Seleccionado")
-    valor = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor")
-    cuenta_destino = models.ForeignKey(
-        Cuenta, on_delete=models.PROTECT, related_name="ventas_cafe_tostado",
-        verbose_name="Cuenta destino"
-    )
-    fecha_pago = models.DateField(blank=True, null=True, verbose_name="Fecha pago")
-
-    class Meta:
-        db_table = "ventas_cafe_tostado"
-        verbose_name = "Venta Café Tostado"
-        verbose_name_plural = "Ventas Café Tostado"
-
-    def __str__(self):
-        return f"{self.fecha_venta} — {self.cantidad} und {self.get_presentacion_display()} (${self.valor:,.0f})"
 
 
 class Floracion(BaseModel):
