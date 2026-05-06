@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion
+from .models import Cuenta, Proveedor, Egreso, Ingreso, Transaccion
 
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
@@ -32,7 +32,3 @@ class TransaccionAdmin(admin.ModelAdmin):
     list_filter = ("cuenta_origen", "cuenta_destino")
     date_hierarchy = "fecha"
 
-@admin.register(Observacion)
-class ObservacionAdmin(admin.ModelAdmin):
-    list_display = ("fecha", "observacion")
-    date_hierarchy = "fecha"

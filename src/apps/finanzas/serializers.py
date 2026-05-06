@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion, InversionCDT
+from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, InversionCDT
 
 
 class CuentaSerializer(serializers.ModelSerializer):
@@ -77,13 +77,6 @@ class TransaccionSerializer(serializers.ModelSerializer):
             'valor', 'observaciones',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['created_at', 'updated_at']
-
-
-class ObservacionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Observacion
-        fields = ['id', 'fecha', 'observacion', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 

@@ -286,3 +286,17 @@ class VentaBanano(BaseModel):
     def __str__(self):
         tipo = self.tipo_platano.nombre if self.tipo_platano_id else "?"
         return f"{self.fecha} — {self.kilos} kg {tipo} (${self.valor_total:,.0f})"
+
+
+class Observacion(BaseModel):
+    fecha = models.DateField(db_index=True, verbose_name="Fecha")
+    observacion = models.TextField(verbose_name="Observación")
+
+    class Meta:
+        db_table = "observaciones"
+        verbose_name = "Observación"
+        verbose_name_plural = "Observaciones"
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"{self.fecha} — {self.observacion[:60]}"

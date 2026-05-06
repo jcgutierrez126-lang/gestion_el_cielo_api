@@ -12,12 +12,13 @@ from django.db.models.functions import TruncWeek, TruncMonth, TruncYear
 from .models import (
     TipoBanano, TipoCafe, VariedadLote,
     Lote, VentaCafe, VentaCafeTostado, VentaBanano,
-    Floracion, MezclaAbono,
+    Floracion, MezclaAbono, Observacion,
 )
 from .serializers import (
     TipoBananoSerializer, TipoCafeSerializer, VariedadLoteSerializer,
     LoteSerializer, VentaCafeSerializer, VentaCafeTostadoSerializer,
     VentaBananoSerializer, FloracionSerializer, MezclaAbonoSerializer,
+    ObservacionSerializer,
 )
 
 
@@ -428,5 +429,26 @@ class MezclaAbonoViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__lte=fecha_hasta)
         if lote:
             qs = qs.filter(lote_id=lote)
+
+        return qs.order_by('-fecha')
+
+
+class ObservacionViewSet(viewsets.ModelViewSet):
+    serializer_class = ObservacionSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['fecha', 'created_at']
+
+    def get_queryset(self):
+        qs = Observacion.objects.all()
+        p = self.request.query_params
+
+        fecha_desde = p.get('fecha_desde')
+        fecha_hasta = p.get('fecha_hasta')
+
+        if fecha_desde:
+            qs = qs.filter(fecha__gte=fecha_desde)
+        if fecha_hasta:
+            qs = qs.filter(fecha__lte=fecha_hasta)
 
         return qs.order_by('-fecha')

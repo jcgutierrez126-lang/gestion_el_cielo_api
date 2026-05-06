@@ -232,15 +232,3 @@ class InversionCDT(BaseModel):
         return f"CDT {self.entidad} — ${self.monto:,.0f} ({self.fecha_inicio} → {self.fecha_vencimiento})"
 
 
-class Observacion(BaseModel):
-    fecha = models.DateField(db_index=True, verbose_name="Fecha")
-    observacion = models.TextField(verbose_name="Observación")
-
-    class Meta:
-        db_table = "observaciones"
-        verbose_name = "Observación"
-        verbose_name_plural = "Observaciones"
-        ordering = ['-fecha']
-
-    def __str__(self):
-        return f"{self.fecha} — {self.observacion[:60]}"

@@ -6,10 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Sum, Count, Avg
 from django.db.models.functions import TruncMonth
-from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, Observacion, InversionCDT
+from .models import Ciudad, Cuenta, Proveedor, Egreso, Ingreso, Transaccion, InversionCDT
 from .serializers import (
     CiudadSerializer, CuentaSerializer, ProveedorSerializer, EgresoSerializer,
-    IngresoSerializer, TransaccionSerializer, ObservacionSerializer, InversionCDTSerializer,
+    IngresoSerializer, TransaccionSerializer, InversionCDTSerializer,
 )
 
 
@@ -145,27 +145,6 @@ class TransaccionViewSet(viewsets.ModelViewSet):
         agg = self.filter_queryset(self.get_queryset()).aggregate(total_valor=Sum('valor'))
         response.data['total_valor'] = str(agg['total_valor'] or 0)
         return response
-
-
-class ObservacionViewSet(viewsets.ModelViewSet):
-    serializer_class = ObservacionSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['fecha', 'created_at']
-
-    def get_queryset(self):
-        qs = Observacion.objects.all()
-        p = self.request.query_params
-
-        fecha_desde = p.get('fecha_desde')
-        fecha_hasta = p.get('fecha_hasta')
-
-        if fecha_desde:
-            qs = qs.filter(fecha__gte=fecha_desde)
-        if fecha_hasta:
-            qs = qs.filter(fecha__lte=fecha_hasta)
-
-        return qs.order_by('-fecha')
 
 
 class InversionCDTViewSet(viewsets.ModelViewSet):

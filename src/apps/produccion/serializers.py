@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     TipoBanano, TipoCafe, VariedadLote,
     Lote, VentaCafe, VentaCafeTostado, VentaBanano,
-    Floracion, MezclaAbono, MezclaAbonoFertilizante,
+    Floracion, MezclaAbono, MezclaAbonoFertilizante, Observacion,
 )
 
 
@@ -109,6 +109,13 @@ class MezclaAbonoFertilizanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = MezclaAbonoFertilizante
         fields = ['id', 'fertilizante', 'num_bultos', 'precio_bulto']
+
+
+class ObservacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Observacion
+        fields = ['id', 'fecha', 'observacion', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class MezclaAbonoSerializer(serializers.ModelSerializer):

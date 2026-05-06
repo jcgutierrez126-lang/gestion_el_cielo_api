@@ -3,6 +3,7 @@ from .views import (
     TipoBananoViewSet, TipoCafeViewSet, VariedadLoteViewSet,
     LoteViewSet, VentaCafeViewSet, VentaCafeTostadoViewSet,
     VentaBananoViewSet, FloracionViewSet, MezclaAbonoViewSet,
+    ObservacionViewSet,
 )
 
 router = DefaultRouter()
@@ -15,5 +16,6 @@ router.register('ventas-cafe-tostado', VentaCafeTostadoViewSet, basename='ventas
 router.register('ventas-banano', VentaBananoViewSet, basename='ventas-banano')
 router.register('floraciones', FloracionViewSet, basename='floraciones')
 router.register('mezclas-abono', MezclaAbonoViewSet, basename='mezclas-abono')
+router.register('observaciones', ObservacionViewSet, basename='observaciones')
 
 urlpatterns = router.urls
