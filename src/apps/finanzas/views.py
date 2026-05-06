@@ -206,7 +206,7 @@ class ResumenView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.produccion.models import VentaCafe, VentaCafeTostado, VentaBanano
+        from apps.produccion.models import VentaCafe, VentaBanano
         from apps.nomina.models import Empleado
         from decimal import Decimal
 
