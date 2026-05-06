@@ -450,5 +450,8 @@ class ObservacionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__gte=fecha_desde)
         if fecha_hasta:
             qs = qs.filter(fecha__lte=fecha_hasta)
+        origen = p.get('origen')
+        if origen:
+            qs = qs.filter(origen=origen)
 
         return qs.order_by('-fecha')

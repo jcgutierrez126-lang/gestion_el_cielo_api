@@ -114,7 +114,11 @@ class MezclaAbonoFertilizanteSerializer(serializers.ModelSerializer):
 class ObservacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Observacion
-        fields = ['id', 'fecha', 'observacion', 'created_at', 'updated_at']
+        fields = [
+            'id', 'fecha', 'observacion',
+            'origen', 'control_semanal_id', 'semana_ref',
+            'created_at', 'updated_at',
+        ]
         read_only_fields = ['created_at', 'updated_at']
 
 

@@ -289,8 +289,21 @@ class VentaBanano(BaseModel):
 
 
 class Observacion(BaseModel):
+    ORIGENES = [
+        ('manual', 'Manual'),
+        ('control_semanal', 'Control Semanal'),
+    ]
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
     observacion = models.TextField(verbose_name="Observación")
+    origen = models.CharField(
+        max_length=30, choices=ORIGENES, default='manual', db_index=True, verbose_name="Origen"
+    )
+    control_semanal_id = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="ID Control Semanal"
+    )
+    semana_ref = models.CharField(
+        max_length=150, blank=True, null=True, verbose_name="Semana referencia"
+    )
 
     class Meta:
         db_table = "observaciones"
