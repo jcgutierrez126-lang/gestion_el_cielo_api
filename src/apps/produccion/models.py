@@ -102,27 +102,27 @@ class Lote(BaseModel):
 
 class VentaCafe(BaseModel):
     fecha = models.DateField(db_index=True, verbose_name="Fecha")
-    kilos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Kilos")
+    kilos = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Kilos")
     cargas = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Cargas")
     tipo_cafe = models.ForeignKey(
         TipoCafe, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo de café"
     )
     factor = models.DecimalField(
-        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Factor"
+        max_digits=20, decimal_places=6, blank=True, null=True, verbose_name="Factor"
     )
-    precio_kilo = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Precio x kilo")
+    precio_kilo = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Precio x kilo")
     precio_carga = models.DecimalField(
-        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Precio x carga"
+        max_digits=20, decimal_places=6, blank=True, null=True, verbose_name="Precio x carga"
     )
     comprador = models.CharField(max_length=100, verbose_name="Comprador")
-    valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
+    valor_total = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Valor total")
     deduccion = models.DecimalField(
-        max_digits=20, decimal_places=2, default=0, blank=True, null=True, verbose_name="Deducción"
+        max_digits=20, decimal_places=6, default=0, blank=True, null=True, verbose_name="Deducción"
     )
     retefuente = models.DecimalField(
-        max_digits=20, decimal_places=2, default=0, blank=True, null=True, verbose_name="Retefuente"
+        max_digits=20, decimal_places=6, default=0, blank=True, null=True, verbose_name="Retefuente"
     )
-    valor_neto = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor neto")
+    valor_neto = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Valor neto")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_cafe", verbose_name="Cuenta destino"
     )
@@ -130,14 +130,14 @@ class VentaCafe(BaseModel):
         max_length=100, blank=True, null=True, verbose_name="Facturado a"
     )
     conversion_cereza_seco = models.DecimalField(
-        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Conversión cereza/seco"
+        max_digits=20, decimal_places=6, blank=True, null=True, verbose_name="Conversión cereza/seco"
     )
     beneficio = models.CharField(max_length=100, blank=True, null=True, verbose_name="Beneficio")
     transportador = models.CharField(
         max_length=100, blank=True, null=True, verbose_name="Transportador"
     )
     valor_transporte = models.DecimalField(
-        max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Valor transporte"
+        max_digits=20, decimal_places=6, blank=True, null=True, verbose_name="Valor transporte"
     )
 
     class Meta:
@@ -223,13 +223,13 @@ class VentaBanano(BaseModel):
     tipo_platano = models.ForeignKey(
         TipoBanano, on_delete=models.PROTECT, db_index=True, verbose_name="Tipo"
     )
-    kilos = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Kilos")
-    precio_kilo = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Precio x kilo")
+    kilos = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Kilos")
+    precio_kilo = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Precio x kilo")
     lote = models.ForeignKey(
         Lote, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="ventas_banano", verbose_name="Lote"
     )
-    valor_total = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Valor total")
+    valor_total = models.DecimalField(max_digits=20, decimal_places=6, verbose_name="Valor total")
     cuenta_destino = models.ForeignKey(
         Cuenta, on_delete=models.PROTECT, related_name="ventas_banano", verbose_name="Cuenta destino"
     )
