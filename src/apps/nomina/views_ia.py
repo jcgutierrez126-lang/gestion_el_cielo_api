@@ -586,11 +586,6 @@ class LeerPlanillaView(APIView):
 
             datos = json.loads(raw)
 
-            for r in datos.get('registros', []):
-                tl = (r.get('tipo_labor') or '').lower().strip()
-                if tl not in TIPOS_LABOR_VALIDOS:
-                    r['tipo_labor'] = 'varios'
-
             return Response({
                 'ok': True,
                 'datos': datos,
@@ -637,17 +632,12 @@ def _buscar_empleado(nombre: str, umbral: float = 0.4):
 def _buscar_tipo_labor(texto: str):
     if not texto:
         return None
-    t = texto.strip().upper()
-    t = OCR_CORRECCIONES_LABOR.get(t, t)
-    t_original = texto.strip()
-    mapped = CODIGOS_LABOR.get(t)
-    if mapped:
-        resultado = TipoLabor.objects.filter(nombre__iexact=mapped).first()
-        if resultado:
-            return resultado
+    t = texto.strip()
+    t_corr = OCR_CORRECCIONES_LABOR.get(t.upper(), t)
     return (
-        TipoLabor.objects.filter(abreviatura__iexact=t_original).first() or
-        TipoLabor.objects.filter(nombre__icontains=t_original).first()
+        TipoLabor.objects.filter(abreviatura__iexact=t_corr).first() or
+        TipoLabor.objects.filter(abreviatura__iexact=t).first() or
+        TipoLabor.objects.filter(nombre__icontains=t).first()
     )
 
 
@@ -655,16 +645,20 @@ def _buscar_tipo_cobro(texto: str):
     if not texto:
         return None
     t = texto.strip()
-    return TipoCobro.objects.filter(abreviatura__iexact=t).first() or \
-           TipoCobro.objects.filter(nombre__icontains=t).first()
+    return (
+        TipoCobro.objects.filter(abreviatura__iexact=t).first() or
+        TipoCobro.objects.filter(nombre__icontains=t).first()
+    )
 
 
 def _buscar_lote(texto: str):
     if not texto:
         return None
     t = texto.strip()
-    return Lote.objects.filter(abreviatura__iexact=t).first() or \
-           Lote.objects.filter(nombre__icontains=t).first()
+    return (
+        Lote.objects.filter(abreviatura__iexact=t).first() or
+        Lote.objects.filter(nombre__icontains=t).first()
+    )
 
 
 class GuardarPlanillaView(APIView):
