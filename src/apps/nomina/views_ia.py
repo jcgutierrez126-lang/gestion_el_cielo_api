@@ -35,18 +35,11 @@ def _claude_create(client, max_retries=3, **kwargs):
 
 
 # Correcciones de OCR frecuentes en manuscrito
+# SOLO para letras que se confunden visualmente, NO para abreviaturas válidas del modelo
 OCR_CORRECCIONES_LABOR = {
     "AR": "VR",   # V se confunde con A en manuscrito
     "DS": "DB",   # B se confunde con S en manuscrito
     "DE": "DB",   # variante común
-    "FR": "FR",   # Recolección en Finca (alias local)
-    "PL": "R",    # alias de Recolección
-    "RC": "R",    # alias de Recolección
-    "GN": "G",    # Guadaña
-    "EB": "E",    # Embolsada
-    "DM": "D",    # Deshojada
-    "MH": "V",    # Varios
-    "MN": "N",    # Nómina
 }
 
 
@@ -185,30 +178,45 @@ Para el campo "nombre": transcribe el nombre exactamente como aparece en la plan
 USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
 
 ESTRUCTURA de la planilla:
-- ENCABEZADO: número de semana, rango de fechas y valor del jornal diario.
+- ENCABEZADO: número de semana, rango de fechas, valor del jornal diario.
 - TABLA: una fila por trabajador. Para cada día (Lunes a Sábado) hay TRES columnas en este orden:
-    1. LABOR  — código de labor (ej: R, G, B, AT, EB, RC, PL…)
-    2. LOTE   — abreviatura del lote (ej: GD, LL, B, SF, F, SH, Nu…)
-    3. CANT.  — número (kilos u otro), puede estar en blanco
-  Después de las columnas de días vienen:
-    - COBRO: letra K, J, C o N (una sola letra al final de la fila)
-    - VALOR: monto total de la semana para ese trabajador (puede tener punto como separador de miles, ej: 71.667 = 71667)
+    1. LABOR — código de la labor realizada ese día
+    2. LOTE  — abreviatura del lote
+    3. CANT. — número (puede estar en blanco)
+  Al final de cada fila, FUERA de los días:
+    - COBRO: una sola letra (K / J / C / N)
+    - VALOR: un número (su significado depende del tipo de cobro, ver abajo)
 - OBSERVACIONES al pie.
 
 INSTRUCCIONES:
 1. Crea UN REGISTRO por trabajador-día que tenga labor registrada.
-2. Fecha de cada día: lunes=fecha_inicio+0, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5.
+2. Fecha: lunes=+0, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5.
 3. La CANTIDAD es la TERCERA columna de cada día (después del lote). Si en blanco → null.
-4. El TIPO DE COBRO es la letra única al final de la fila (K/J/C/N). Léela exactamente.
-   - K → tipo_cobro="kilos"
+4. El COBRO es la letra al final de la fila. Léela con cuidado:
+   - K → tipo_cobro="kilos"    (N es Nómina, NO Jornal)
    - J → tipo_cobro="jornal"
    - C → tipo_cobro="contrato"
-   - N → tipo_cobro="nomina"  ← IMPORTANTE: N es Nómina, no Jornal
-5. El VALOR de la columna final de la fila es el monto semanal total. Ponlo en el campo "valor".
-   Quita los puntos de miles (71.667 → 71667). NUNCA lo dejes null si está escrito.
-   Si el trabajador tiene varios días, asigna el valor solo al primer registro y null al resto.
-6. Para jornal: valor por día = valor_jornal del encabezado (si el valor total no está legible).
-7. Para el lote: el código de la columna LOTE de ESE DÍA. Si en blanco → null.
+   - N → tipo_cobro="nomina"
+
+5. CÓMO CALCULAR EL VALOR de cada registro diario según el cobro:
+
+   Cobro K (kilos):
+   - La columna VALOR de la fila = PRECIO POR KILO (ej: 1.300 = $1.300/kg).
+   - Para cada día: valor = cantidad_dia × precio_kilo.
+   - Si la cantidad del día está en blanco → valor = null.
+
+   Cobro J (jornal):
+   - La columna VALOR de la fila = total de la semana (ej: 60.000 = $60.000).
+   - Para cada día: valor = valor_jornal del ENCABEZADO (el jornal diario).
+   - NUNCA dejes valor null en un día jornal si el encabezado tiene valor_jornal.
+
+   Cobro N (nómina) o C (contrato):
+   - La columna VALOR de la fila = total de la semana.
+   - Cuenta cuántos días trabajó ese trabajador (cuántos registros se crean para él).
+   - Para cada día: valor = redondeo(total_semana ÷ días_trabajados).
+
+6. Quita los puntos de miles en todos los números: 71.667→71667, 1.300→1300, 60.000→60000.
+7. Para el lote: la abreviatura de la columna LOTE de ESE DÍA. Si en blanco → null.
 8. En "observaciones" incluye gastos, vales y notas al pie.
 
 Devuelve exactamente este JSON:
