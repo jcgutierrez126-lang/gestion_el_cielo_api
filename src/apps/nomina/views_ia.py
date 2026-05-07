@@ -102,6 +102,18 @@ def _get_empleados_activos() -> list:
     except Exception:
         return []
 
+
+def _get_cobros_dict() -> dict:
+    """Devuelve {abreviatura: nombre} desde el modelo TipoCobro."""
+    try:
+        return {
+            tc['abreviatura']: tc['nombre']
+            for tc in TipoCobro.objects.all().values('abreviatura', 'nombre')
+            if tc['abreviatura']
+        }
+    except Exception:
+        return {"K": "Kilos", "J": "Jornal", "C": "Contrato", "N": "Nómina"}
+
 MESES_ES = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -125,10 +137,12 @@ def semana_ref_desde_fecha(fecha_str: str) -> str:
 def _build_system_prompt_diaria() -> str:
     lotes = _get_lotes_dict()
     labores = _get_labores_dict()
+    cobros = _get_cobros_dict()
     empleados = _get_empleados_activos()
 
     lotes_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(lotes.items())) if lotes else "M=La Milagrosa, T=El Tanque, LL=El Llano, GU=Guaduas, SJ=San José, N=El Niño"
     labores_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(labores.items())) if labores else "R=Recolección, G=Guadaña, A=Abono, B=Banano, E=Embolsada, AT=Aux.Transporte"
+    cobros_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(cobros.items())) if cobros else "K=Kilos, J=Jornal, C=Contrato, N=Nómina"
     empleados_txt = ", ".join(f'"{e}"' for e in empleados) if empleados else "(sin lista)"
 
     return f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
@@ -138,7 +152,7 @@ REGLAS ESTRICTAS:
 - Devuelve SOLO JSON válido, sin texto antes ni después, sin bloques de código.
 - Si un campo está en blanco o ilegible, usa null.
 - Fechas en formato YYYY-MM-DD.
-- Valores numéricos sin separador de miles (ejemplo: 390000 no 390.000).
+- Valores numéricos sin separador de miles (ejemplo: 71667 no 71.667, 94000 no 94.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
 
 LOTES VÁLIDOS (abreviatura → nombre completo):
@@ -149,11 +163,20 @@ LABORES VÁLIDAS (código → nombre):
 {labores_txt}
 CORRECCIONES OCR EN MANUSCRITO: "AR"→"VR"(varios), "DS"→"DB"(desbejucar), "PL"/"RC"→"R"(recolección), "EB"→"E"(embolsada), "DM"→"D"(deshojada), "FR"→"R"(recolección).
 
-TRABAJADORES ACTIVOS DE LA FINCA (úsalos para normalizar nombres, elige el más parecido):
-{empleados_txt}
-Para el campo "nombre": transcribe el nombre exactamente como aparece escrito en la planilla (no inventes ni normalices).
+TIPOS DE COBRO (última columna de cada fila, antes de Valor):
+{cobros_txt}
+IMPORTANTE: "N" es Nómina (pago fijo), "J" es Jornal (pago por día). Son letras distintas — léelas con cuidado.
+Para tipo_cobro en el JSON usa: kilos, jornal, contrato, nomina (en minúsculas).
 
-- Para tipo_cobro usa: kilos, jornal, contrato, nomina.
+COLUMNA VALOR (última columna de cada fila):
+- Es el VALOR TOTAL DE LA SEMANA para ese trabajador. Léelo y ponlo en el campo "valor" de cada registro.
+- Si el trabajador tiene varios días, reparte o usa el total en el primer registro del día y null en los demás.
+- NUNCA dejes valor=null si hay un número visible en la columna Valor de esa fila.
+
+TRABAJADORES ACTIVOS DE LA FINCA:
+{empleados_txt}
+Para el campo "nombre": transcribe el nombre exactamente como aparece en la planilla.
+
 - Omite los días donde el trabajador no tiene labor registrada.
 - Gastos/compras en "observaciones", NO como registros de trabajador.
 """
@@ -162,20 +185,31 @@ Para el campo "nombre": transcribe el nombre exactamente como aparece escrito en
 USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
 
 ESTRUCTURA de la planilla:
-- ENCABEZADO: número de semana y rango de fechas, valor jornal diario.
-- TABLA: una fila por trabajador. Columnas por día (Lunes a Sábado): labor, kilos si aplica, lote.
-  Al final de cada fila: Cobro (K/J/C/N) y Valor Total.
+- ENCABEZADO: número de semana, rango de fechas y valor del jornal diario.
+- TABLA: una fila por trabajador. Para cada día (Lunes a Sábado) hay TRES columnas en este orden:
+    1. LABOR  — código de labor (ej: R, G, B, AT, EB, RC, PL…)
+    2. LOTE   — abreviatura del lote (ej: GD, LL, B, SF, F, SH, Nu…)
+    3. CANT.  — número (kilos u otro), puede estar en blanco
+  Después de las columnas de días vienen:
+    - COBRO: letra K, J, C o N (una sola letra al final de la fila)
+    - VALOR: monto total de la semana para ese trabajador (puede tener punto como separador de miles, ej: 71.667 = 71667)
 - OBSERVACIONES al pie.
 
 INSTRUCCIONES:
-1. Crea UN REGISTRO por cada combinación trabajador-día que tenga labor registrada.
-2. Calcula la fecha exacta de cada día desde el lunes (lunes=+0, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5).
-3. Si el día tiene kilos → tipo_cobro="kilos", cantidad=kilos del día.
-4. Si el día solo tiene labor sin kilos → tipo_cobro="jornal", cantidad=null, valor=valor_jornal del encabezado.
-   IMPORTANTE: Para días de jornal SIEMPRE asigna valor=valor_jornal. No dejes valor en null.
-5. Cobro K=kilos, J=jornal, C=contrato, N=nomina.
-6. Para el lote: el que aparece en ESE DÍA para ese trabajador. Si no aplica → null.
-7. En "observaciones" incluye gastos, totales de vale y notas al pie.
+1. Crea UN REGISTRO por trabajador-día que tenga labor registrada.
+2. Fecha de cada día: lunes=fecha_inicio+0, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5.
+3. La CANTIDAD es la TERCERA columna de cada día (después del lote). Si en blanco → null.
+4. El TIPO DE COBRO es la letra única al final de la fila (K/J/C/N). Léela exactamente.
+   - K → tipo_cobro="kilos"
+   - J → tipo_cobro="jornal"
+   - C → tipo_cobro="contrato"
+   - N → tipo_cobro="nomina"  ← IMPORTANTE: N es Nómina, no Jornal
+5. El VALOR de la columna final de la fila es el monto semanal total. Ponlo en el campo "valor".
+   Quita los puntos de miles (71.667 → 71667). NUNCA lo dejes null si está escrito.
+   Si el trabajador tiene varios días, asigna el valor solo al primer registro y null al resto.
+6. Para jornal: valor por día = valor_jornal del encabezado (si el valor total no está legible).
+7. Para el lote: el código de la columna LOTE de ESE DÍA. Si en blanco → null.
+8. En "observaciones" incluye gastos, vales y notas al pie.
 
 Devuelve exactamente este JSON:
 {
