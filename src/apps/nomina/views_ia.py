@@ -183,7 +183,8 @@ ESTRUCTURA de la planilla:
 
 INSTRUCCIONES:
 1. Crea UN REGISTRO por trabajador-día que tenga labor registrada.
-2. Fecha: lunes=+0, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5.
+2. El encabezado tiene "Del DD/MM al DD/MM de YYYY" — el primer DD/MM es el LUNES = fecha_inicio (YYYY-MM-DD).
+   Fecha de cada día: lunes=fecha_inicio, martes=+1d, miércoles=+2d, jueves=+3d, viernes=+4d, sábado=+5d.
 3. La CANTIDAD es la TERCERA columna de cada día (después del lote). Si en blanco → null.
 4. El COBRO es la letra al final de la fila. Léela con cuidado:
    - K → tipo_cobro="kilos"    (N es Nómina, NO Jornal)
@@ -196,12 +197,12 @@ INSTRUCCIONES:
    Cobro K (kilos):
    - La columna VALOR de la fila = PRECIO POR KILO (ej: 1.300 = $1.300/kg).
    - Para cada día: valor = cantidad_dia × precio_kilo.
-   - Si la cantidad del día está en blanco → valor = null.
+   - Si la cantidad del día está en blanco → cantidad = 1 (se asume 1 kilo/unidad); valor = 1 × precio_kilo.
 
    Cobro J (jornal):
-   - La columna VALOR de la fila = total de la semana (ej: 60.000 = $60.000).
-   - Para cada día: valor = valor_jornal del ENCABEZADO (el jornal diario).
-   - NUNCA dejes valor null en un día jornal si el encabezado tiene valor_jornal.
+   - La columna VALOR de la fila = tarifa diaria de ESE trabajador (ej: 60.000 = $60.000/día).
+   - Para cada día que trabajó: valor = esa tarifa diaria (la cifra de la columna VALOR de su fila).
+   - NUNCA dejes valor null en un día jornal.
 
    Cobro N (nómina) o C (contrato):
    - La columna VALOR de la fila = total de la semana.
@@ -222,8 +223,8 @@ Devuelve exactamente este JSON:
       "nombre": "nombre tal como está escrito en la planilla",
       "dia": "Lunes|Martes|Miércoles|Jueves|Viernes|Sábado",
       "fecha": "YYYY-MM-DD de ese día",
-      "lote": "nombre completo del lote o null",
-      "labor": "nombre completo de la labor",
+      "lote": "abreviatura del lote tal como está escrita en la planilla (ej: 6D, LL, B, SF, Sh, BL, ML, Es, Nn, SJ, GD) o null",
+      "labor": "abreviatura de la labor tal como está escrita en la planilla (ej: Rc, PL, Gn, FR, EB, DM, AT, AR, MH, AL, VR, DB) o null",
       "cantidad": número_o_null,
       "tipo_cobro": "jornal|kilos|contrato|nomina",
       "valor": número_o_null
