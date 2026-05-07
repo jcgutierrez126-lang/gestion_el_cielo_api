@@ -37,7 +37,6 @@ def _claude_create(client, max_retries=3, **kwargs):
 # Correcciones de OCR frecuentes en manuscrito
 # SOLO para letras que se confunden visualmente, NO para abreviaturas válidas del modelo
 OCR_CORRECCIONES_LABOR = {
-    "AR": "VR",   # V se confunde con A en manuscrito
     "DS": "DB",   # B se confunde con S en manuscrito
     "DE": "DB",   # variante común
 }
@@ -148,15 +147,18 @@ REGLAS ESTRICTAS:
 - Valores numéricos sin separador de miles (ejemplo: 71667 no 71.667, 94000 no 94.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
 
-LOTES — devuelve la ABREVIATURA EXACTA como aparece escrita en la planilla. NO conviertas a nombre completo.
-Si en blanco o ilegible → null. Abreviaturas conocidas: {lotes_txt}
+LOTES — copia la ABREVIATURA EXACTA como está escrita. NO conviertas a nombre completo. Si en blanco → null.
+Abreviaturas del modelo: {lotes_txt}
+Ejemplos reales: "6D", "LL", "B", "F", "BLB", "LLB", "SF", "Sh", "Nn", "ML", "BL", "Es", "SJ", "GD"
 
-LABORES — devuelve la ABREVIATURA EXACTA como aparece en la planilla. NO conviertas a nombre completo.
-Abreviaturas conocidas: {labores_txt}
-Correcciones OCR: "AR"→"VR", "DS"→"DB".
+LABORES — copia la ABREVIATURA EXACTA como está escrita. NO conviertas a nombre completo.
+Abreviaturas del modelo: {labores_txt}
+Ejemplos reales: "Rc", "PL", "Gn", "FR", "AR", "Yr", "AT", "EB", "PJ", "DJ", "MH", "AL", "DM", "VR", "DB"
+IMPORTANTE: "AR"=Arriero (labor válida), "VR"=Varios — son abreviaturas DISTINTAS. No corrijas "AR" a "VR".
+Corrección OCR única: "DS"→"DB" (B y S se confunden en manuscrito).
 
 TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
-IMPORTANTE: "N"=Nómina, "J"=Jornal. Son letras distintas.
+IMPORTANTE: "N"=Nómina ≠ "J"=Jornal. Son letras distintas. Lee con cuidado la columna K·J/C·N.
 Para tipo_cobro usa en minúsculas: kilos, jornal, contrato, nomina.
 
 TRABAJADORES ACTIVOS DE LA FINCA:
