@@ -41,6 +41,16 @@ OCR_CORRECCIONES_LABOR = {
     "DE": "DB",   # variante común
 }
 
+# Dígitos que el OCR confunde con letras en abreviaturas manuscritas
+_DIGIT_A_LETRA = str.maketrans("0168", "OIGB")
+
+
+def _corregir_abreviatura(valor):
+    """Reemplaza dígitos visualmente similares a letras en abreviaturas de lote/labor."""
+    if not valor:
+        return valor
+    return valor.translate(_DIGIT_A_LETRA)
+
 
 def _normalizar(texto: str) -> str:
     """Minúsculas, sin acentos, solo letras y espacios."""
@@ -149,13 +159,15 @@ REGLAS ESTRICTAS:
 
 LOTES — copia la ABREVIATURA EXACTA como está escrita. NO conviertas a nombre completo. Si en blanco → null.
 Abreviaturas del modelo: {lotes_txt}
-Ejemplos reales: "6D", "LL", "B", "F", "BLB", "LLB", "SF", "Sh", "Nn", "ML", "BL", "Es", "SJ", "GD"
+Ejemplos reales: "GD", "LL", "B", "F", "BLB", "LLB", "SF", "Sh", "Nn", "ML", "BL", "Es", "SJ", "G"
+IMPORTANTE: Las abreviaturas de lotes y labores contienen SOLO LETRAS, nunca dígitos.
+Si ves un dígito es un error de lectura — reemplázalo por la letra visualmente similar: 6→G, 0→O, 1→I.
 
 LABORES — copia la ABREVIATURA EXACTA como está escrita. NO conviertas a nombre completo.
 Abreviaturas del modelo: {labores_txt}
 Ejemplos reales: "Rc", "PL", "Gn", "FR", "AR", "Yr", "AT", "EB", "PJ", "DJ", "MH", "AL", "DM", "VR", "DB"
 IMPORTANTE: "AR"=Arriero (labor válida), "VR"=Varios — son abreviaturas DISTINTAS. No corrijas "AR" a "VR".
-Corrección OCR única: "DS"→"DB" (B y S se confunden en manuscrito).
+Correcciones OCR: "DS"→"DB", "DE"→"DB" (B se confunde con S/E en manuscrito). Si ves "6" en abreviatura → "G".
 
 TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
 IMPORTANTE: "N"=Nómina ≠ "J"=Jornal. Son letras distintas. Lee con cuidado la columna K·J/C·N.
@@ -225,7 +237,7 @@ Devuelve exactamente este JSON:
       "nombre": "nombre tal como está escrito en la planilla",
       "dia": "Lunes|Martes|Miércoles|Jueves|Viernes|Sábado",
       "fecha": "YYYY-MM-DD de ese día",
-      "lote": "abreviatura del lote tal como está escrita en la planilla (ej: 6D, LL, B, SF, Sh, BL, ML, Es, Nn, SJ, GD) o null",
+      "lote": "abreviatura del lote (ej: GD, LL, B, SF, Sh, BL, ML, Es, Nn, SJ, G) — SOLO LETRAS, nunca dígitos. o null",
       "labor": "abreviatura de la labor tal como está escrita en la planilla (ej: Rc, PL, Gn, FR, EB, DM, AT, AR, MH, AL, VR, DB) o null",
       "cantidad": número_o_null,
       "tipo_cobro": "jornal|kilos|contrato|nomina",
@@ -361,6 +373,11 @@ class LeerPlanillaDiariaView(APIView):
                 raw = raw.rsplit('```', 1)[0]
 
             datos = json.loads(raw)
+
+            # Corrige dígitos OCR en abreviaturas de lote y labor (6→G, 0→O, 1→I, 8→B)
+            for reg in datos.get('registros', []):
+                reg['lote'] = _corregir_abreviatura(reg.get('lote'))
+                reg['labor'] = _corregir_abreviatura(reg.get('labor'))
 
             # Soporta formato semanal (fecha_inicio) y diario (fecha)
             fecha = datos.get('fecha_inicio') or datos.get('fecha') or ''
