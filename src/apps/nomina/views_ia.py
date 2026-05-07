@@ -167,7 +167,11 @@ LABORES — copia la ABREVIATURA EXACTA como está escrita. NO conviertas a nomb
 Abreviaturas del modelo: {labores_txt}
 Ejemplos reales: "Rc", "PL", "Gn", "FR", "AR", "Yr", "AT", "EB", "PJ", "DJ", "MH", "AL", "DM", "VR", "DB"
 IMPORTANTE: "AR"=Arriero (labor válida), "VR"=Varios — son abreviaturas DISTINTAS. No corrijas "AR" a "VR".
-Correcciones OCR: "DS"→"DB", "DE"→"DB" (B se confunde con S/E en manuscrito). Si ves "6" en abreviatura → "G".
+Confusiones frecuentes en manuscrito:
+- B se confunde con S/E → "DS"→"DB", "DE"→"DB"
+- V se confunde con Y → si ves "Yr", considera si la abreviatura real es "Vr" (VR=Varios). Lee el contexto.
+- D se confunde con P → "DJ" y "PJ" son labores distintas; si el contexto apunta a despacho/distribución, prioriza "DJ".
+- Los dígitos son errores OCR de letras: 6→G, 0→O, 1→I, 8→B.
 
 TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
 IMPORTANTE: "N"=Nómina ≠ "J"=Jornal. Son letras distintas. Lee con cuidado la columna K·J/C·N.
@@ -179,6 +183,7 @@ Para el campo "nombre": transcribe EXACTAMENTE como aparece en la planilla.
 
 - Omite los días donde el trabajador no tiene labor registrada.
 - Gastos/compras van en "observaciones", NO como registros de trabajador.
+- CRÍTICO: cada fila de la tabla corresponde a UN solo trabajador. No mezcles datos de filas adyacentes. El cobro y el valor al final de la fila pertenecen SOLO a esa fila, no a la de arriba ni abajo.
 """
 
 
