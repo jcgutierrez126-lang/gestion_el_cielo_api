@@ -4,7 +4,10 @@ from .views import (
     EmpleadoViewSet, ControlSemanalViewSet,
     PrestamoEmpleadoViewSet, TipoLaborViewSet, TipoCobroViewSet,
 )
-from .views_ia import LeerPlanillaView, LeerPlanillaDiariaView, LeerPlanillaSemanalExcelView, GuardarPlanillaView
+from .views_ia import (
+    LeerPlanillaView, LeerPlanillaDiariaView, LeerPlanillaSemanalExcelView,
+    GuardarPlanillaView, MatchEmpleadoView, ListEmpleadosActivosView,
+)
 
 router = DefaultRouter()
 router.register('empleados', EmpleadoViewSet, basename='empleados')
@@ -18,4 +21,6 @@ urlpatterns = router.urls + [
     path('leer-planilla-diaria/', LeerPlanillaDiariaView.as_view(), name='leer-planilla-diaria'),
     path('leer-planilla-excel/', LeerPlanillaSemanalExcelView.as_view(), name='leer-planilla-excel'),
     path('guardar-planilla/', GuardarPlanillaView.as_view(), name='guardar-planilla'),
+    path('match-empleado/', MatchEmpleadoView.as_view(), name='match-empleado'),
+    path('empleados-activos/', ListEmpleadosActivosView.as_view(), name='empleados-activos'),
 ]

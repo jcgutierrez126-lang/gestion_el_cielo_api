@@ -2,7 +2,9 @@ import base64
 import json
 import os
 import logging
+import re
 import time
+import unicodedata
 from datetime import date, timedelta
 from io import BytesIO
 
@@ -20,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 def _claude_create(client, max_retries=3, **kwargs):
-    """Llama a client.messages.create con reintentos en caso de sobrecarga (529)."""
     for attempt in range(1, max_retries + 1):
         try:
             return client.messages.create(**kwargs)
@@ -33,47 +34,73 @@ def _claude_create(client, max_retries=3, **kwargs):
                 raise
 
 
-TIPOS_LABOR_VALIDOS = [
-    'recoleccion', 'guadana', 'abono', 'varios', 'banano',
-    'cosecha', 'siembra', 'siembra_banano', 'siembra_cafe', 'embolsada',
-    'deshojada', 'deschuponar', 'desbejucar', 'arriero', 'broca',
-    'control_plagas', 'platear', 'encalar', 'herbicida', 'machete',
-    'beneficio', 'mantenimiento', 'transporte', 'seleccion_cafe',
-    'arreglo_banano', 'incapacidad',
-    'auxilio_labor', 'auxilio_transporte', 'permiso', 'nomina', 'contrato',
-]
-
-LOTES_FINCA = {
-    "1": "La Milagrosa", "2": "El Tanque", "3": "La Cruz",
-    "4": "San José", "5": "El Niño", "6": "San Charbel",
-    "7": "La Ceja Palos", "8": "La Ceja Zocas", "9": "Huerta",
-    "10": "Hoyo Caliente", "11": "Guaduas", "12": "La Bola",
-    "13": "El Llano", "14": "Destechada",
-}
-
-LOTES_ABREV = {
-    "M": "La Milagrosa", "T": "El Tanque", "C": "La Cruz",
-    "SJ": "San José", "N": "El Niño", "SCH": "San Charbel",
-    "CP": "La Ceja Palos", "CZ": "La Ceja Zocas", "H": "Huerta",
-    "HC": "Hoyo Caliente", "GU": "Guaduas", "BO": "La Bola",
-    "LL": "El Llano", "DT": "Destechada",
-}
-
-CODIGOS_LABOR = {
-    "R": "recoleccion", "G": "guadana", "A": "abono",
-    "B": "banano", "E": "embolsada", "S": "siembra",
-    "C": "cosecha", "V": "varios", "VR": "varios",
-    "CT": "contrato", "P": "permiso", "N": "nomina",
-    "D": "deshojada", "DC": "deschuponar", "DB": "desbejucar",
-    "AL": "auxilio_labor", "AT": "auxilio_transporte",
-}
-
 # Correcciones de OCR frecuentes en manuscrito
 OCR_CORRECCIONES_LABOR = {
     "AR": "VR",   # V se confunde con A en manuscrito
     "DS": "DB",   # B se confunde con S en manuscrito
     "DE": "DB",   # variante común
+    "FR": "FR",   # Recolección en Finca (alias local)
+    "PL": "R",    # alias de Recolección
+    "RC": "R",    # alias de Recolección
+    "GN": "G",    # Guadaña
+    "EB": "E",    # Embolsada
+    "DM": "D",    # Deshojada
+    "MH": "V",    # Varios
+    "MN": "N",    # Nómina
 }
+
+
+def _normalizar(texto: str) -> str:
+    """Minúsculas, sin acentos, solo letras y espacios."""
+    t = unicodedata.normalize('NFD', texto.lower())
+    t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+    return re.sub(r'[^a-z\s]', '', t).strip()
+
+
+def _score_similitud(a: str, b: str) -> float:
+    """Score 0..1 de similitud entre dos nombres normalizados por tokens."""
+    ta = set(_normalizar(a).split())
+    tb = set(_normalizar(b).split())
+    if not ta or not tb:
+        return 0.0
+    interseccion = ta & tb
+    return len(interseccion) / max(len(ta), len(tb))
+
+
+def _get_lotes_dict() -> dict:
+    """Devuelve {abreviatura: nombre} desde el modelo Lote."""
+    try:
+        return {
+            lote['abreviatura']: lote['nombre']
+            for lote in Lote.objects.filter(activo=True).values('abreviatura', 'nombre')
+            if lote['abreviatura']
+        }
+    except Exception:
+        return {}
+
+
+def _get_labores_dict() -> dict:
+    """Devuelve {abreviatura: nombre} desde el modelo TipoLabor."""
+    try:
+        return {
+            tl['abreviatura']: tl['nombre']
+            for tl in TipoLabor.objects.filter(activo=True).values('abreviatura', 'nombre')
+            if tl['abreviatura']
+        }
+    except Exception:
+        return {}
+
+
+def _get_empleados_activos() -> list:
+    """Devuelve lista de nombres completos de empleados activos."""
+    try:
+        return list(
+            Empleado.objects.filter(activo=True)
+            .order_by('nombre_completo')
+            .values_list('nombre_completo', flat=True)
+        )
+    except Exception:
+        return []
 
 MESES_ES = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -82,7 +109,6 @@ MESES_ES = [
 
 
 def semana_ref_desde_fecha(fecha_str: str) -> str:
-    """Genera el texto de referencia de semana a partir de una fecha ISO."""
     try:
         d = date.fromisoformat(fecha_str)
     except (ValueError, TypeError):
@@ -96,70 +122,16 @@ def semana_ref_desde_fecha(fecha_str: str) -> str:
     return f"Semana del {lunes.day} de {mes} al {sabado.day} de {mes2} de {lunes.year}"
 
 
-# ── Prompts planilla semanal (formato antiguo, para compatibilidad) ────────────
+def _build_system_prompt_diaria() -> str:
+    lotes = _get_lotes_dict()
+    labores = _get_labores_dict()
+    empleados = _get_empleados_activos()
 
-SYSTEM_PROMPT = f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
-Tu única tarea es leer imágenes de planillas manuscritas y devolver un JSON estructurado.
+    lotes_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(lotes.items())) if lotes else "M=La Milagrosa, T=El Tanque, LL=El Llano, GU=Guaduas, SJ=San José, N=El Niño"
+    labores_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(labores.items())) if labores else "R=Recolección, G=Guadaña, A=Abono, B=Banano, E=Embolsada, AT=Aux.Transporte"
+    empleados_txt = ", ".join(f'"{e}"' for e in empleados) if empleados else "(sin lista)"
 
-REGLAS ESTRICTAS:
-- Devuelve SOLO JSON válido, sin texto antes ni después, sin ```json```.
-- Si un campo está en blanco o ilegible, usa null.
-- La planilla usa números para los lotes: {LOTES_FINCA}. Convierte el número al nombre.
-- La planilla usa letras para las labores: {CODIGOS_LABOR}. Convierte la letra al nombre.
-- Para tipo_labor normaliza al valor más cercano de esta lista exacta:
-  recoleccion, guadana, abono, varios, banano, cosecha, siembra,
-  embolsada, auxilio_labor, auxilio_transporte, permiso, nomina, contrato
-- Para tipo_cobro usa: kilos, jornal, contrato, nomina
-- Los valores numéricos sin separador de miles (ej: 277600, no 277.600).
-- Las fechas en formato YYYY-MM-DD.
-"""
-
-USER_PROMPT = """Extrae todos los datos de esta planilla semanal de Finca El Cielo.
-
-La planilla tiene dos secciones:
-
-1. REGISTROS DE TRABAJADORES: tabla con columnas #, Trabajador, Cédula,
-   y para cada día (Lun-Sáb): labor/kilos recolectados, lote donde trabajó.
-   Al final: total jornales, total kilos, valor jornal, valor total.
-
-2. COMPRAS: tabla con columnas #, Fecha, Producto, Cantidad, Lugar, Valor.
-
-Devuelve este JSON exacto:
-{
-  "semana": {
-    "fecha_inicio": "YYYY-MM-DD o null",
-    "fecha_fin": "YYYY-MM-DD o null"
-  },
-  "registros": [
-    {
-      "trabajador": "nombre completo",
-      "cedula": "número o null",
-      "lote": "nombre del lote o null",
-      "tipo_labor": "uno de los tipos válidos",
-      "tipo_cobro": "kilos | jornal | contrato | nomina",
-      "kilos": número o null,
-      "jornales": número o null,
-      "costo_unidad": número o null,
-      "valor": número o null
-    }
-  ],
-  "compras": [
-    {
-      "fecha": "YYYY-MM-DD o null",
-      "producto": "nombre del producto",
-      "cantidad": "texto con cantidad y unidad",
-      "lugar": "proveedor o lugar",
-      "valor": número o null
-    }
-  ],
-  "observaciones": "texto de observaciones o null"
-}
-"""
-
-
-# ── Prompts planilla diaria (nuevo formato) ────────────────────────────────────
-
-SYSTEM_PROMPT_DIARIA = f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
+    return f"""Eres un asistente de extracción de datos para la plataforma de gestión de Finca El Cielo.
 Tu única tarea es leer imágenes de planillas semanales manuscritas y devolver un JSON con UN REGISTRO POR TRABAJADOR POR DÍA.
 
 REGLAS ESTRICTAS:
@@ -168,32 +140,42 @@ REGLAS ESTRICTAS:
 - Fechas en formato YYYY-MM-DD.
 - Valores numéricos sin separador de miles (ejemplo: 390000 no 390.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
-- Para lotes: usa estas abreviaturas {LOTES_ABREV} o números {LOTES_FINCA}. Convierte al nombre completo.
-  Si el lote está ilegible, en blanco o no aplica (ej: auxilio, nomina), usa null. NUNCA uses "Lote" como valor.
-- Para labores: usa estos códigos {CODIGOS_LABOR}. Convierte al nombre completo.
-- CORRECCIONES OCR FRECUENTES EN MANUSCRITO: La letra "V" se confunde con "A" → si ves código "AR" es probablemente "VR" (varios). La letra "B" se confunde con "S" → si ves "DS" es probablemente "DB" (desbejucar).
+
+LOTES VÁLIDOS (abreviatura → nombre completo):
+{lotes_txt}
+Usa exactamente estos nombres. Si el lote está ilegible, en blanco, o no aplica → usa null. NUNCA escribas "Lote" como valor.
+
+LABORES VÁLIDAS (código → nombre):
+{labores_txt}
+CORRECCIONES OCR EN MANUSCRITO: "AR"→"VR"(varios), "DS"→"DB"(desbejucar), "PL"/"RC"→"R"(recolección), "EB"→"E"(embolsada), "DM"→"D"(deshojada), "FR"→"R"(recolección).
+
+TRABAJADORES ACTIVOS DE LA FINCA (úsalos para normalizar nombres, elige el más parecido):
+{empleados_txt}
+Para el campo "nombre": transcribe el nombre exactamente como aparece escrito en la planilla (no inventes ni normalices).
+
 - Para tipo_cobro usa: kilos, jornal, contrato, nomina.
 - Omite los días donde el trabajador no tiene labor registrada.
-- Si ves en observaciones "Gastos varios" con montos (ej: neumático, parchada), inclúyelos en el campo "observaciones" pero NO crees registros de trabajador para ellos.
+- Gastos/compras en "observaciones", NO como registros de trabajador.
 """
+
 
 USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
 
 ESTRUCTURA de la planilla:
-- ENCABEZADO: número de semana y rango de fechas (ej: "Semana 8 del 16 al 22 de Febrero del 2026"), valor jornal diario.
-- TABLA: una fila por trabajador. Columnas por día (Lunes a Sábado): labor realizada, kilos si aplica, lote.
-  Al final: Valor Jornal (total semana) y Valor Total.
+- ENCABEZADO: número de semana y rango de fechas, valor jornal diario.
+- TABLA: una fila por trabajador. Columnas por día (Lunes a Sábado): labor, kilos si aplica, lote.
+  Al final de cada fila: Cobro (K/J/C/N) y Valor Total.
 - OBSERVACIONES al pie.
 
 INSTRUCCIONES:
 1. Crea UN REGISTRO por cada combinación trabajador-día que tenga labor registrada.
-2. Calcula la fecha exacta de cada día a partir del lunes de la semana (lunes=+0 días, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5).
-3. Si el día tiene kilos → tipo_cobro = "kilos", cantidad = kilos del día. valor = kilos × precio si está visible.
-4. Si el día solo tiene labor sin kilos → tipo_cobro = "jornal", cantidad = null, valor = valor_jornal del encabezado.
-   IMPORTANTE: Para días de jornal, SIEMPRE asigna valor = valor_jornal (el número del encabezado). No dejes valor en null.
-5. Si el trabajador es "Auxilio de Transporte" u otro concepto especial (nomina/vale), tipo_cobro = "nomina", lote = null, valor = el que aparece.
-6. Para el lote: lee el nombre/abreviatura del lote para ESE DÍA específico del trabajador. Si no hay lote visible, si está ilegible, o si el concepto no aplica lote → usa null. NUNCA escribas la palabra "Lote" como valor del campo lote.
-7. En "observaciones" incluye: texto de observaciones, gastos varios (neumático, parchada, etc.) y el "Total vale semana" si aparece.
+2. Calcula la fecha exacta de cada día desde el lunes (lunes=+0, martes=+1, miércoles=+2, jueves=+3, viernes=+4, sábado=+5).
+3. Si el día tiene kilos → tipo_cobro="kilos", cantidad=kilos del día.
+4. Si el día solo tiene labor sin kilos → tipo_cobro="jornal", cantidad=null, valor=valor_jornal del encabezado.
+   IMPORTANTE: Para días de jornal SIEMPRE asigna valor=valor_jornal. No dejes valor en null.
+5. Cobro K=kilos, J=jornal, C=contrato, N=nomina.
+6. Para el lote: el que aparece en ESE DÍA para ese trabajador. Si no aplica → null.
+7. En "observaciones" incluye gastos, totales de vale y notas al pie.
 
 Devuelve exactamente este JSON:
 {
@@ -202,17 +184,56 @@ Devuelve exactamente este JSON:
   "valor_jornal": número_o_null,
   "registros": [
     {
-      "nombre": "nombre completo del trabajador",
+      "nombre": "nombre tal como está escrito en la planilla",
       "dia": "Lunes|Martes|Miércoles|Jueves|Viernes|Sábado",
-      "fecha": "YYYY-MM-DD de ese día específico",
+      "fecha": "YYYY-MM-DD de ese día",
       "lote": "nombre completo del lote o null",
       "labor": "nombre completo de la labor",
       "cantidad": número_o_null,
-      "tipo_cobro": "jornal | kilos | contrato | nomina",
+      "tipo_cobro": "jornal|kilos|contrato|nomina",
       "valor": número_o_null
     }
   ],
-  "observaciones": "texto de observaciones o null"
+  "observaciones": "texto o null"
+}
+"""
+
+
+# ── Prompt semanal (formato antiguo, compatibilidad) ──────────────────────────
+
+def _build_system_prompt_semanal() -> str:
+    lotes = _get_lotes_dict()
+    labores = _get_labores_dict()
+    empleados = _get_empleados_activos()
+    lotes_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(lotes.items())) if lotes else ""
+    labores_txt = ", ".join(f'"{k}"="{v}"' for k, v in sorted(labores.items())) if labores else ""
+    empleados_txt = ", ".join(f'"{e}"' for e in empleados) if empleados else ""
+    return f"""Eres un asistente de extracción de datos para Finca El Cielo.
+Devuelve SOLO JSON válido. Si un campo está en blanco usa null.
+LOTES: {lotes_txt}
+LABORES: {labores_txt}
+TRABAJADORES: {empleados_txt}
+Para tipo_cobro usa: kilos, jornal, contrato, nomina. Fechas YYYY-MM-DD. Números sin separadores de miles.
+"""
+
+USER_PROMPT = """Extrae todos los datos de esta planilla semanal de Finca El Cielo.
+Devuelve este JSON exacto:
+{
+  "semana": {"fecha_inicio": "YYYY-MM-DD o null", "fecha_fin": "YYYY-MM-DD o null"},
+  "registros": [
+    {
+      "trabajador": "nombre tal como aparece",
+      "cedula": "número o null",
+      "lote": "nombre del lote o null",
+      "tipo_labor": "nombre de la labor",
+      "tipo_cobro": "kilos|jornal|contrato|nomina",
+      "kilos": número_o_null,
+      "jornales": número_o_null,
+      "costo_unidad": número_o_null,
+      "valor": número_o_null
+    }
+  ],
+  "observaciones": "texto o null"
 }
 """
 
@@ -261,7 +282,7 @@ class LeerPlanillaDiariaView(APIView):
                 client,
                 model='claude-haiku-4-5-20251001',
                 max_tokens=8192,
-                system=SYSTEM_PROMPT_DIARIA,
+                system=_build_system_prompt_diaria(),
                 messages=[
                     {
                         'role': 'user',
@@ -488,7 +509,7 @@ class LeerPlanillaView(APIView):
                 client,
                 model='claude-haiku-4-5-20251001',
                 max_tokens=4096,
-                system=SYSTEM_PROMPT,
+                system=_build_system_prompt_semanal(),
                 messages=[
                     {
                         'role': 'user',
@@ -551,15 +572,31 @@ class LeerPlanillaView(APIView):
                             status=status.HTTP_502_BAD_GATEWAY)
 
 
-def _buscar_empleado(nombre: str):
+def _buscar_empleado(nombre: str, umbral: float = 0.4):
+    """Busca el empleado más similar usando score de tokens. Umbral 0..1."""
     if not nombre:
         return None
+    nombre = nombre.strip()
+    # Match exacto primero
     try:
-        return Empleado.objects.get(nombre_completo__iexact=nombre.strip())
-    except Empleado.DoesNotExist:
-        return Empleado.objects.filter(nombre_completo__icontains=nombre.strip()).first()
-    except Empleado.MultipleObjectsReturned:
-        return Empleado.objects.filter(nombre_completo__icontains=nombre.strip()).first()
+        return Empleado.objects.get(nombre_completo__iexact=nombre)
+    except (Empleado.DoesNotExist, Empleado.MultipleObjectsReturned):
+        pass
+    # Match por fragmento
+    qs = Empleado.objects.filter(nombre_completo__icontains=nombre.split()[0] if nombre.split() else nombre)
+    if qs.count() == 1:
+        return qs.first()
+    # Fuzzy por score de tokens sobre todos los activos
+    todos = list(Empleado.objects.filter(activo=True).values('id', 'nombre_completo'))
+    mejor, mejor_score = None, 0.0
+    for e in todos:
+        score = _score_similitud(nombre, e['nombre_completo'])
+        if score > mejor_score:
+            mejor_score = score
+            mejor = e
+    if mejor_score >= umbral:
+        return Empleado.objects.get(id=mejor['id'])
+    return None
 
 
 def _buscar_tipo_labor(texto: str):
@@ -675,3 +712,38 @@ class GuardarPlanillaView(APIView):
             'errores': errores,
             'semana_ref': semana_ref,
         }, status=status.HTTP_201_CREATED)
+
+
+class MatchEmpleadoView(APIView):
+    """Recibe un nombre extraído por OCR y devuelve los empleados más similares del modelo."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        nombre = (request.data.get('nombre') or '').strip()
+        if not nombre:
+            return Response({'error': 'Se requiere "nombre".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        todos = list(
+            Empleado.objects.filter(activo=True)
+            .order_by('nombre_completo')
+            .values('id', 'nombre_completo')
+        )
+        scored = [
+            {'id': e['id'], 'nombre': e['nombre_completo'], 'score': _score_similitud(nombre, e['nombre_completo'])}
+            for e in todos
+        ]
+        scored.sort(key=lambda x: x['score'], reverse=True)
+        return Response({'candidatos': scored[:10]})
+
+
+class ListEmpleadosActivosView(APIView):
+    """Lista todos los empleados activos para el frontend (match manual)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        empleados = list(
+            Empleado.objects.filter(activo=True)
+            .order_by('nombre_completo')
+            .values('id', 'nombre_completo')
+        )
+        return Response({'empleados': empleados})
