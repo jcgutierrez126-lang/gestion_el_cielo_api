@@ -148,30 +148,23 @@ REGLAS ESTRICTAS:
 - Valores numéricos sin separador de miles (ejemplo: 71667 no 71.667, 94000 no 94.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
 
-LOTES VÁLIDOS (abreviatura → nombre completo):
-{lotes_txt}
-Usa exactamente estos nombres. Si el lote está ilegible, en blanco, o no aplica → usa null. NUNCA escribas "Lote" como valor.
+LOTES — devuelve la ABREVIATURA EXACTA como aparece escrita en la planilla. NO conviertas a nombre completo.
+Si en blanco o ilegible → null. Abreviaturas conocidas: {lotes_txt}
 
-LABORES VÁLIDAS (código → nombre):
-{labores_txt}
-CORRECCIONES OCR EN MANUSCRITO: "AR"→"VR"(varios), "DS"→"DB"(desbejucar), "PL"/"RC"→"R"(recolección), "EB"→"E"(embolsada), "DM"→"D"(deshojada), "FR"→"R"(recolección).
+LABORES — devuelve la ABREVIATURA EXACTA como aparece en la planilla. NO conviertas a nombre completo.
+Abreviaturas conocidas: {labores_txt}
+Correcciones OCR: "AR"→"VR", "DS"→"DB".
 
-TIPOS DE COBRO (última columna de cada fila, antes de Valor):
-{cobros_txt}
-IMPORTANTE: "N" es Nómina (pago fijo), "J" es Jornal (pago por día). Son letras distintas — léelas con cuidado.
-Para tipo_cobro en el JSON usa: kilos, jornal, contrato, nomina (en minúsculas).
-
-COLUMNA VALOR (última columna de cada fila):
-- Es el VALOR TOTAL DE LA SEMANA para ese trabajador. Léelo y ponlo en el campo "valor" de cada registro.
-- Si el trabajador tiene varios días, reparte o usa el total en el primer registro del día y null en los demás.
-- NUNCA dejes valor=null si hay un número visible en la columna Valor de esa fila.
+TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
+IMPORTANTE: "N"=Nómina, "J"=Jornal. Son letras distintas.
+Para tipo_cobro usa en minúsculas: kilos, jornal, contrato, nomina.
 
 TRABAJADORES ACTIVOS DE LA FINCA:
 {empleados_txt}
-Para el campo "nombre": transcribe el nombre exactamente como aparece en la planilla.
+Para el campo "nombre": transcribe EXACTAMENTE como aparece en la planilla.
 
 - Omite los días donde el trabajador no tiene labor registrada.
-- Gastos/compras en "observaciones", NO como registros de trabajador.
+- Gastos/compras van en "observaciones", NO como registros de trabajador.
 """
 
 
