@@ -170,8 +170,11 @@ Ejemplos reales: "Rc", "PL", "Gn", "FR", "AR", "Yr", "AT", "EB", "PJ", "DJ", "MH
 IMPORTANTE: "AR"=Arriero (labor válida), "VR"=Varios — son abreviaturas DISTINTAS. No corrijas "AR" a "VR".
 Confusiones frecuentes en manuscrito:
 - B se confunde con S/E → "DS"→"DB", "DE"→"DB"
+- D se confunde con A → "AB"→"DB" (la letra D manuscrita parece A con el arco abierto)
 - V se confunde con Y → si ves "Yr", considera si la abreviatura real es "Vr" (VR=Varios). Lee el contexto.
-- D se confunde con P → "DJ" y "PJ" son labores distintas; si el contexto apunta a despacho/distribución, prioriza "DJ".
+- D se confunde con P → "DJ" y "PJ" son labores distintas.
+- A se confunde con F → "FR"→"AR" (Arriado): si ves "FR" y la fila no es claramente Fruta, considera "AR".
+  Clave: "AR"=Arriero (movimiento de mulas/carga), "FR"=Fruta (cosecha de fruta). Son actividades distintas. Lee el contexto del lote.
 - Los dígitos son errores OCR de letras: 6→G, 0→O, 1→I, 8→B.
 
 TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
@@ -182,9 +185,14 @@ TRABAJADORES ACTIVOS DE LA FINCA:
 {empleados_txt}
 Para el campo "nombre": transcribe EXACTAMENTE como aparece en la planilla.
 
+REGLA ABSOLUTA DE AISLAMIENTO DE FILAS:
+- Cada línea horizontal de la tabla = UN trabajador y SOLO ese trabajador.
+- Los datos de una fila JAMÁS se mezclan con la fila de arriba ni con la de abajo.
+- El nombre al inicio de la fila es el "propietario" de TODOS los datos de esa misma línea horizontal.
+- Si una celda parece pertenecer a otra fila, es un error de lectura — asígnala al trabajador de esa fila.
+- El COBRO (col 21) y el VALOR (col 22) al final pertenecen EXCLUSIVAMENTE a esa fila.
 - Omite los días donde el trabajador no tiene labor registrada.
 - Gastos/compras van en "observaciones", NO como registros de trabajador.
-- CRÍTICO: cada fila de la tabla corresponde a UN solo trabajador. No mezcles datos de filas adyacentes. El cobro y el valor al final de la fila pertenecen SOLO a esa fila, no a la de arriba ni abajo.
 """
 
 
