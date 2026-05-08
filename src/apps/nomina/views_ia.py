@@ -232,22 +232,21 @@ INSTRUCCIONES:
    - C → tipo_cobro="contrato"
    - N → tipo_cobro="nomina"
 
-5. CÓMO CALCULAR EL VALOR de cada registro diario según el cobro:
+5. CÓMO ASIGNAR EL VALOR de cada registro diario:
+
+   La columna VALOR al final de la fila es siempre una TARIFA o PRECIO que se repite igual para cada día.
+   NUNCA dividas el valor entre días trabajados.
 
    Cobro K (kilos):
-   - La columna VALOR de la fila = PRECIO POR KILO (ej: 1.300 = $1.300/kg).
-   - Para cada día: valor = cantidad_dia × precio_kilo.
-   - Si la cantidad del día está en blanco → cantidad = 1 (se asume 1 kilo/unidad); valor = 1 × precio_kilo.
+   - VALOR fila = PRECIO POR UNIDAD (ej: 1.300 = $1.300/unidad).
+   - Para cada día: valor = cantidad_dia × precio_unidad.
+   - Si cantidad en blanco → cantidad = 1; valor = precio_unidad.
 
-   Cobro J (jornal):
-   - La columna VALOR de la fila = tarifa diaria de ESE trabajador (ej: 60.000 = $60.000/día).
-   - Para cada día que trabajó: valor = esa tarifa diaria (la cifra de la columna VALOR de su fila).
-   - NUNCA dejes valor null en un día jornal.
-
-   Cobro N (nómina) o C (contrato):
-   - La columna VALOR de la fila = total de la semana.
-   - Cuenta cuántos días trabajó ese trabajador (cuántos registros se crean para él).
-   - Para cada día: valor = redondeo(total_semana ÷ días_trabajados).
+   Cobro J (jornal), N (nómina) o C (contrato):
+   - VALOR fila = TARIFA DIARIA del trabajador (ej: 74.000 = $74.000/día).
+   - Para CADA día que trabajó: valor = esa misma tarifa diaria.
+   - Ejemplo: trabajó 3 días con tarifa 74.000 → 3 registros, cada uno con valor=74000.
+   - NUNCA dejes valor null.
 
 6. Quita los puntos de miles en todos los números: 71.667→71667, 1.300→1300, 60.000→60000.
 7. Para el lote: la abreviatura de la columna LOTE de ESE DÍA. Si en blanco → null.
