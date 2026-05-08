@@ -190,21 +190,29 @@ Para el campo "nombre": transcribe EXACTAMENTE como aparece en la planilla.
 USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
 
 ESTRUCTURA de la planilla:
-- ENCABEZADO: número de semana, rango de fechas, valor del jornal diario.
-- TABLA: una fila por trabajador. Para cada día (Lunes a Sábado) hay TRES columnas en este orden:
-    1. LABOR — código de la labor realizada ese día
-    2. LOTE  — abreviatura del lote
-    3. CANT. — número (puede estar en blanco)
-  Al final de cada fila, FUERA de los días:
-    - COBRO: una sola letra (K / J / C / N)
-    - VALOR: un número (su significado depende del tipo de cobro, ver abajo)
-- OBSERVACIONES al pie.
+El encabezado de columnas es exactamente:
+  NOMBRE | L(Lun) Lo(Lun) C(Lun) | L(Mar) Lo(Mar) C(Mar) | L(Mié) Lo(Mié) C(Mié) | L(Jue) Lo(Jue) C(Jue) | L(Vie) Lo(Vie) C(Vie) | L(Sáb) Lo(Sáb) C(Sáb) | COBRO | VALOR
+
+Cada grupo de 3 sub-columnas por día SIEMPRE en este orden:
+  1ª = LABOR (abreviatura de la labor)
+  2ª = LOTE  (abreviatura del lote)
+  3ª = CANT  (número, puede estar en blanco)
+
+Al final de la fila (fuera de los días): COBRO (K/J/C/N) y VALOR (un número).
+
+CÓMO LEER CADA FILA (una fila = un trabajador):
+- Lee las 3 sub-columnas de Lunes. Si LABOR está vacía → ese día no trabajó → OMÍTELO.
+- Luego las 3 de Martes. Si LABOR está vacía → OMÍTELO.
+- Repite para Miércoles, Jueves, Viernes, Sábado.
+- Solo crea un registro por cada día donde LABOR tenga algo escrito.
+- El COBRO y VALOR al final pertenecen ÚNICAMENTE a esa fila, no a la de arriba ni abajo.
+- No hay domingo. La semana va de Lunes a Sábado (6 días máximo por trabajador).
 
 INSTRUCCIONES:
 1. Crea UN REGISTRO por trabajador-día que tenga labor registrada.
 2. El encabezado tiene "Del DD/MM al DD/MM de YYYY" — el primer DD/MM es el LUNES = fecha_inicio (YYYY-MM-DD).
    Fecha de cada día: lunes=fecha_inicio, martes=+1d, miércoles=+2d, jueves=+3d, viernes=+4d, sábado=+5d.
-3. La CANTIDAD es la TERCERA columna de cada día (después del lote). Si en blanco → null.
+3. La CANTIDAD es la TERCERA sub-columna de cada día (después del lote). Si en blanco → null.
 4. El COBRO es la letra al final de la fila. Léela con cuidado:
    - K → tipo_cobro="kilos"    (N es Nómina, NO Jornal)
    - J → tipo_cobro="jornal"
