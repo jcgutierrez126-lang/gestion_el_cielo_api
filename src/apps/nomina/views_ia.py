@@ -17,6 +17,7 @@ from rest_framework import status
 
 from .models import Empleado, TipoLabor, TipoCobro, ControlSemanal
 from apps.produccion.models import Lote
+from apps.finanzas.models import Egreso, Cuenta
 
 logger = logging.getLogger(__name__)
 
@@ -780,11 +781,39 @@ class GuardarPlanillaView(APIView):
             )
             creados.append(nombre)
 
+        # Crear egreso de nómina automáticamente si hubo registros guardados
+        egreso_creado = False
+        if creados:
+            total_nomina = sum(
+                ControlSemanal.objects.filter(
+                    semana_ref=semana_ref,
+                    fecha_inicio=fecha_lunes,
+                ).values_list('valor', flat=True)
+            )
+            cuenta = (
+                Cuenta.objects.filter(tipo='agencia').first()
+                or Cuenta.objects.first()
+            )
+            if cuenta and total_nomina:
+                Egreso.objects.update_or_create(
+                    nombre=f'Nómina {semana_ref}',
+                    fecha=fecha_lunes,
+                    defaults={
+                        'cuenta': cuenta,
+                        'categoria': 'nomina',
+                        'valor': total_nomina,
+                        'descripcion': f'{len(creados)} registros — {semana_ref}',
+                        'estado': 'pagada',
+                    }
+                )
+                egreso_creado = True
+
         return Response({
             'ok': True,
             'creados': len(creados),
             'errores': errores,
             'semana_ref': semana_ref,
+            'egreso_creado': egreso_creado,
         }, status=status.HTTP_201_CREATED)
 
 
