@@ -189,31 +189,43 @@ Para el campo "nombre": transcribe EXACTAMENTE como aparece en la planilla.
 
 USER_PROMPT_DIARIA = """Extrae todos los datos de esta planilla SEMANAL de trabajadores de Finca El Cielo.
 
-ESTRUCTURA de la planilla:
-El encabezado de columnas es exactamente:
-  NOMBRE | L(Lun) Lo(Lun) C(Lun) | L(Mar) Lo(Mar) C(Mar) | L(Mié) Lo(Mié) C(Mié) | L(Jue) Lo(Jue) C(Jue) | L(Vie) Lo(Vie) C(Vie) | L(Sáb) Lo(Sáb) C(Sáb) | COBRO | VALOR
+FORMULARIO IMPRESO — ESTRUCTURA FIJA (la foto es siempre de este mismo formulario):
+22 columnas en este orden exacto:
 
-Cada grupo de 3 sub-columnas por día SIEMPRE en este orden:
-  1ª = LABOR (abreviatura de la labor)
-  2ª = LOTE  (abreviatura del lote)
-  3ª = CANT  (número, puede estar en blanco)
+  Col  1 : NOMBRE del trabajador
+  Col  2 : Labor  Lunes      ← primera sub-col del grupo Lunes (separada por línea gruesa)
+  Col  3 : Lote   Lunes
+  Col  4 : Cant.  Lunes
+  Col  5 : Labor  Martes     ← primera sub-col del grupo Martes (línea gruesa)
+  Col  6 : Lote   Martes
+  Col  7 : Cant.  Martes
+  Col  8 : Labor  Miércoles  ← línea gruesa
+  Col  9 : Lote   Miércoles
+  Col 10 : Cant.  Miércoles
+  Col 11 : Labor  Jueves     ← línea gruesa
+  Col 12 : Lote   Jueves
+  Col 13 : Cant.  Jueves
+  Col 14 : Labor  Viernes    ← línea gruesa
+  Col 15 : Lote   Viernes
+  Col 16 : Cant.  Viernes
+  Col 17 : Labor  Sábado     ← línea gruesa
+  Col 18 : Lote   Sábado
+  Col 19 : Cant.  Sábado
+  Col 20 : 1/2    Sábado     (medio día — ignora, no extraer)
+  Col 21 : COBRO             (K / J / C / N — aplica a toda la semana de esa fila)
+  Col 22 : VALOR             (cifra — aplica a toda la semana de esa fila)
 
-Al final de la fila (fuera de los días): COBRO (K/J/C/N) y VALOR (un número).
-
-CÓMO LEER CADA FILA (una fila = un trabajador):
-- Lee las 3 sub-columnas de Lunes. Si LABOR está vacía → ese día no trabajó → OMÍTELO.
-- Luego las 3 de Martes. Si LABOR está vacía → OMÍTELO.
-- Repite para Miércoles, Jueves, Viernes, Sábado.
-- Solo crea un registro por cada día donde LABOR tenga algo escrito.
-- El COBRO y VALOR al final pertenecen ÚNICAMENTE a esa fila, no a la de arriba ni abajo.
-- No hay domingo. La semana va de Lunes a Sábado (6 días máximo por trabajador).
+REGLA FUNDAMENTAL: si la celda Labor (col 2,5,8,11,14,17) de un día está VACÍA → ese trabajador
+NO trabajó ese día → NO crees registro para ese día. Solo crea registro cuando Labor tiene algo escrito.
+El COBRO y VALOR al final son de ESA FILA únicamente, no de la fila de arriba ni abajo.
+No hay domingo. Máximo 6 registros por trabajador (Lunes→Sábado).
 
 INSTRUCCIONES:
 1. Crea UN REGISTRO por trabajador-día que tenga labor registrada.
 2. El encabezado tiene "Del DD/MM al DD/MM de YYYY" — el primer DD/MM es el LUNES = fecha_inicio (YYYY-MM-DD).
    Fecha de cada día: lunes=fecha_inicio, martes=+1d, miércoles=+2d, jueves=+3d, viernes=+4d, sábado=+5d.
-3. La CANTIDAD es la TERCERA sub-columna de cada día (después del lote). Si en blanco → null.
-4. El COBRO es la letra al final de la fila. Léela con cuidado:
+3. La CANTIDAD es Col 4/7/10/13/16/19 (tercera de cada grupo). Si en blanco → null.
+4. El COBRO es Col 21. Léela con cuidado:
    - K → tipo_cobro="kilos"    (N es Nómina, NO Jornal)
    - J → tipo_cobro="jornal"
    - C → tipo_cobro="contrato"
