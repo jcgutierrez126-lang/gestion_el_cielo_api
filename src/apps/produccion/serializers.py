@@ -1,3 +1,4 @@
+from decimal import Decimal, ROUND_HALF_UP
 from rest_framework import serializers
 from .models import (
     TipoBanano, TipoCafe, VariedadLote,
@@ -56,6 +57,13 @@ class VentaCafeSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
+def _round6(value):
+    """Round Decimal/float to 6 places to avoid float precision errors."""
+    if value is None:
+        return value
+    return Decimal(str(value)).quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+
+
 class VentaBananoSerializer(serializers.ModelSerializer):
     cuenta_destino_nombre = serializers.CharField(source='cuenta_destino.nombre', read_only=True)
     tipo_nombre = serializers.CharField(source='tipo_platano.nombre', read_only=True)
@@ -75,6 +83,15 @@ class VentaBananoSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def validate_valor_total(self, value):
+        return _round6(value)
+
+    def validate_kilos(self, value):
+        return _round6(value)
+
+    def validate_precio_kilo(self, value):
+        return _round6(value)
 
 
 class FloracionSerializer(serializers.ModelSerializer):
