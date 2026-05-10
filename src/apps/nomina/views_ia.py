@@ -177,6 +177,14 @@ Confusiones frecuentes en manuscrito:
   Clave: "AR"=Arriero (movimiento de mulas/carga), "FR"=Fruta (cosecha de fruta). Son actividades distintas. Lee el contexto del lote.
 - Los dígitos son errores OCR de letras: 6→G, 0→O, 1→I, 8→B.
 
+TIPO DE COBRO — columna K·J / C·N (col 21) — lee con extremo cuidado:
+- La letra "J" (palo vertical + gancho) = Jornal → tipo_cobro="jornal"
+- La letra "N" (dos palos y diagonal) = Nómina → tipo_cobro="nomina"
+- Son MUY distintas. "J" tiene forma de anzuelo, "N" tiene dos trazos verticales.
+- La letra "K" = Kilos → tipo_cobro="kilos"
+- La letra "C" = Contrato → tipo_cobro="contrato"
+- NUNCA pongas "nomina" si la letra en la planilla se parece a "J".
+
 TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
 IMPORTANTE: "N"=Nómina ≠ "J"=Jornal. Son letras distintas. Lee con cuidado la columna K·J/C·N.
 Para tipo_cobro usa en minúsculas: kilos, jornal, contrato, nomina.
@@ -246,9 +254,11 @@ INSTRUCCIONES:
    NUNCA dividas el valor entre días trabajados.
 
    Cobro K (kilos):
-   - VALOR fila = PRECIO POR UNIDAD (ej: 1.300 = $1.300/unidad).
-   - Para cada día: valor = cantidad_dia × precio_unidad.
-   - Si cantidad en blanco → cantidad = 1; valor = precio_unidad.
+   - VALOR fila = PRECIO POR UNIDAD (ej: 1.300 = $1.300/unidad, 1.450 = $1.450/unidad).
+   - Para cada día: en el campo "valor" del JSON pon EL PRECIO UNITARIO (lo que está escrito en la planilla).
+     NO calcules cantidad × precio. El sistema lo calcula solo.
+   - Si cantidad en blanco → cantidad = 1 (un solo bulto/unidad).
+   - Ejemplo correcto: cantidad=106, valor=1300 (precio por unidad, NO 137800).
 
    Cobro J (jornal), N (nómina) o C (contrato):
    - VALOR fila = TARIFA DIARIA del trabajador (ej: 74.000 = $74.000/día).
@@ -363,7 +373,7 @@ class LeerPlanillaDiariaView(APIView):
             client = anthropic.Anthropic(api_key=api_key)
             message = _claude_create(
                 client,
-                model='claude-haiku-4-5-20251001',
+                model='claude-opus-4-7',
                 max_tokens=8192,
                 system=_build_system_prompt_diaria(),
                 messages=[
@@ -595,7 +605,7 @@ class LeerPlanillaView(APIView):
             client = anthropic.Anthropic(api_key=api_key)
             message = _claude_create(
                 client,
-                model='claude-haiku-4-5-20251001',
+                model='claude-opus-4-7',
                 max_tokens=4096,
                 system=_build_system_prompt_semanal(),
                 messages=[
