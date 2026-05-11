@@ -189,9 +189,15 @@ TIPOS DE COBRO (letra al final de la fila): {cobros_txt}
 IMPORTANTE: "N"=Nómina ≠ "J"=Jornal. Son letras distintas. Lee con cuidado la columna K·J/C·N.
 Para tipo_cobro usa en minúsculas: kilos, jornal, contrato, nomina.
 
-TRABAJADORES ACTIVOS DE LA FINCA:
+TRABAJADORES ACTIVOS DE LA FINCA (lista oficial):
 {empleados_txt}
-Para el campo "nombre": transcribe EXACTAMENTE como aparece en la planilla.
+
+Para el campo "nombre":
+- Busca el nombre de la planilla en la lista oficial de arriba.
+- Si hay una coincidencia clara (mismo apellido, mismo primer nombre) → usa EL NOMBRE EXACTO de la lista oficial.
+- Si el nombre está ilegible o truncado → usa el de la lista que más se parezca fonéticamente.
+- NUNCA inventes nombres que no estén en la lista. Si no hay match razonable → transcribe lo que ves literalmente.
+- Los números en los nombres son errores de lectura: "R1goberto" → "Rigoberto".
 
 REGLA ABSOLUTA DE AISLAMIENTO DE FILAS:
 - Cada línea horizontal de la tabla = UN trabajador y SOLO ese trabajador.
@@ -375,6 +381,7 @@ class LeerPlanillaDiariaView(APIView):
                 client,
                 model='claude-opus-4-7',
                 max_tokens=8192,
+                temperature=0,
                 system=_build_system_prompt_diaria(),
                 messages=[
                     {
