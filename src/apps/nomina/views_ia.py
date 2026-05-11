@@ -381,7 +381,6 @@ class LeerPlanillaDiariaView(APIView):
                 client,
                 model='claude-opus-4-7',
                 max_tokens=8192,
-                temperature=0,
                 system=_build_system_prompt_diaria(),
                 messages=[
                     {
