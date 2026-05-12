@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import anthropic as _anthropic
 from django.db import transaction
 from rest_framework import viewsets, filters
@@ -20,6 +21,27 @@ from .serializers import (
     VentaBananoSerializer, FloracionSerializer, MezclaAbonoSerializer,
     ObservacionSerializer,
 )
+
+
+def _call_openai_vision(prompt: str, image_b64: str, media_type: str, max_tokens: int = 1024) -> tuple:
+    """Llama a GPT-4o con visión. Devuelve (texto, tokens_usados)."""
+    import openai
+    api_key = os.getenv('OPENAI_API_KEY', '')
+    client = openai.OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        max_tokens=max_tokens,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_b64}"}},
+                {"type": "text", "text": prompt},
+            ],
+        }],
+    )
+    text = response.choices[0].message.content.strip()
+    tokens = (response.usage.prompt_tokens or 0) + (response.usage.completion_tokens or 0)
+    return text, tokens
 
 
 class TipoBananoViewSet(viewsets.ModelViewSet):
@@ -143,49 +165,48 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
 
         image_data = base64.standard_b64encode(imagen.read()).decode('utf-8')
         media_type = imagen.content_type or 'image/jpeg'
+        proveedor = request.data.get('proveedor_ia', 'claude')
+
+        prompt_cafe = (
+            "Esta es una factura de compra de café (COF) de una cooperativa colombiana.\n"
+            "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
+            "{\n"
+            '  "fecha": "YYYY-MM-DD",\n'
+            '  "comprador": "nombre completo de la cooperativa del encabezado",\n'
+            '  "factura": "número de factura",\n'
+            '  "items": [\n'
+            '    {"descripcion": "texto del artículo", "kilos": 128.0, "precio_kilo": 24800.0, "valor_total": 3174400}\n'
+            '  ],\n'
+            '  "retenciones": 0.0,\n'
+            '  "total": 3174400.0\n'
+            "}\n"
+            "La fecha está en el campo FECHA (formato dd-mes-aa → YYYY-MM-DD). "
+            "Columna CANT = kilos, COSTO = precio_kilo. "
+            "Retenciones viene del resumen inferior. "
+            "Números sin puntos de miles ni símbolos."
+        )
 
         try:
-            client = _anthropic.Anthropic()
-            message = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=1024,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {"type": "base64", "media_type": media_type, "data": image_data},
-                        },
-                        {
-                            "type": "text",
-                            "text": (
-                                "Esta es una factura de compra de café (COF) de una cooperativa colombiana.\n"
-                                "Extrae los datos y responde SOLO con JSON válido, sin texto ni markdown extra:\n"
-                                "{\n"
-                                '  "fecha": "YYYY-MM-DD",\n'
-                                '  "comprador": "nombre completo de la cooperativa del encabezado",\n'
-                                '  "factura": "número de factura",\n'
-                                '  "items": [\n'
-                                '    {"descripcion": "texto del artículo", "kilos": 128.0, "precio_kilo": 24800.0, "valor_total": 3174400}\n'
-                                '  ],\n'
-                                '  "retenciones": 0.0,\n'
-                                '  "total": 3174400.0\n'
-                                "}\n"
-                                "La fecha está en el campo FECHA (formato dd-mes-aa → YYYY-MM-DD). "
-                                "Columna CANT = kilos, COSTO = precio_kilo. "
-                                "Retenciones viene del resumen inferior. "
-                                "Números sin puntos de miles ni símbolos."
-                            ),
-                        },
-                    ],
-                }],
-            )
+            if proveedor == 'gpt':
+                text, _ = _call_openai_vision(prompt_cafe, image_data, media_type, max_tokens=1024)
+            else:
+                client = _anthropic.Anthropic()
+                message = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                        {"type": "text", "text": prompt_cafe},
+                    ]}],
+                )
+                text = message.content[0].text.strip()
         except _anthropic.BadRequestError as e:
             return Response({'error': str(e)}, status=502)
         except _anthropic.APIError as e:
             return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
+        except Exception as e:
+            return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
 
-        text = message.content[0].text.strip()
         if text.startswith("```"):
             lines = text.splitlines()
             text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
@@ -272,65 +293,64 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
 
         image_data = base64.standard_b64encode(imagen.read()).decode('utf-8')
         media_type = imagen.content_type or 'image/jpeg'
+        proveedor = request.data.get('proveedor_ia', 'claude')
+
+        prompt_banano = (
+            "Eres un extractor de datos de facturas de liquidación de banano de COMSAB (Cooperativa Agromultiactiva San Bartolo, Colombia).\n"
+            "El formato de este documento es SIEMPRE el mismo. Extrae los campos según estas reglas exactas:\n\n"
+            "REGLAS DE EXTRACCIÓN:\n"
+            "- 'fecha': busca la línea 'Fecha Liquidación: DD/MM/YYYY' → convierte a YYYY-MM-DD\n"
+            "- 'finca': busca la línea 'FINCA: N – NOMBRE' o 'FINCA: N - NOMBRE' → extrae SOLO el nombre (sin el número ni guión)\n"
+            "- 'numero_cuenta': busca la línea 'Forma de Pago: Cuenta: XXXXXXXXXX' → extrae SOLO los dígitos de la cuenta\n"
+            "- 'banco': busca 'Banco: NOMBRE' en la línea de Forma de Pago → extrae el nombre del banco\n"
+            "- 'items': cada fila de la tabla con Código, Descripción, U.Medida=KILOS, Cantidad, Valor Unitario, Valor Total\n"
+            "  → 'descripcion' = texto exacto de la columna Descripción\n"
+            "  → 'kilos' = valor de columna Cantidad (número decimal)\n"
+            "  → 'precio_kilo' = valor de columna Valor Unitario (número entero)\n"
+            "  → 'valor_total' = valor de columna Valor Total (número entero)\n"
+            "  → EXCLUYE filas de deducciones (ASOFRUCOL, APORTES, etc.)\n"
+            "- 'deducciones': filas con valor negativo debajo de 'Total Pagos'\n"
+            "  → 'concepto' = texto descriptivo, 'valor' = número POSITIVO (sin signo negativo)\n"
+            "- 'total_pagos': valor de la línea 'Total Pagos'\n"
+            "- 'total_a_pagar': valor de la línea 'Total a Pagar'\n\n"
+            "Responde SOLO con JSON válido, sin texto ni markdown:\n"
+            "{\n"
+            '  "fecha": "YYYY-MM-DD",\n'
+            '  "finca": "LA INMACULADA",\n'
+            '  "numero_cuenta": "02945202842",\n'
+            '  "banco": "BANCOLOMBIA",\n'
+            '  "items": [\n'
+            '    {"descripcion": "BANANO EXTRA", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
+            '  ],\n'
+            '  "deducciones": [{"concepto": "ASOFRUCOL DESCUENTO ASOFRUCOL", "valor": 2341}],\n'
+            '  "total_pagos": 2256418,\n'
+            '  "total_a_pagar": 2208949\n'
+            "}\n"
+            "Los números sin puntos de miles ni símbolos de moneda ($). "
+            "Si no encuentras un campo, usa null."
+        )
 
         try:
-            client = _anthropic.Anthropic()
-            message = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=1024,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {"type": "base64", "media_type": media_type, "data": image_data},
-                        },
-                        {
-                            "type": "text",
-                            "text": (
-                                "Eres un extractor de datos de facturas de liquidación de banano de COMSAB (Cooperativa Agromultiactiva San Bartolo, Colombia).\n"
-                                "El formato de este documento es SIEMPRE el mismo. Extrae los campos según estas reglas exactas:\n\n"
-                                "REGLAS DE EXTRACCIÓN:\n"
-                                "- 'fecha': busca la línea 'Fecha Liquidación: DD/MM/YYYY' → convierte a YYYY-MM-DD\n"
-                                "- 'finca': busca la línea 'FINCA: N – NOMBRE' o 'FINCA: N - NOMBRE' → extrae SOLO el nombre (sin el número ni guión)\n"
-                                "- 'numero_cuenta': busca la línea 'Forma de Pago: Cuenta: XXXXXXXXXX' → extrae SOLO los dígitos de la cuenta\n"
-                                "- 'banco': busca 'Banco: NOMBRE' en la línea de Forma de Pago → extrae el nombre del banco\n"
-                                "- 'items': cada fila de la tabla con Código, Descripción, U.Medida=KILOS, Cantidad, Valor Unitario, Valor Total\n"
-                                "  → 'descripcion' = texto exacto de la columna Descripción\n"
-                                "  → 'kilos' = valor de columna Cantidad (número decimal)\n"
-                                "  → 'precio_kilo' = valor de columna Valor Unitario (número entero)\n"
-                                "  → 'valor_total' = valor de columna Valor Total (número entero)\n"
-                                "  → EXCLUYE filas de deducciones (ASOFRUCOL, APORTES, etc.)\n"
-                                "- 'deducciones': filas con valor negativo debajo de 'Total Pagos'\n"
-                                "  → 'concepto' = texto descriptivo, 'valor' = número POSITIVO (sin signo negativo)\n"
-                                "- 'total_pagos': valor de la línea 'Total Pagos'\n"
-                                "- 'total_a_pagar': valor de la línea 'Total a Pagar'\n\n"
-                                "Responde SOLO con JSON válido, sin texto ni markdown:\n"
-                                "{\n"
-                                '  "fecha": "YYYY-MM-DD",\n'
-                                '  "finca": "LA INMACULADA",\n'
-                                '  "numero_cuenta": "02945202842",\n'
-                                '  "banco": "BANCOLOMBIA",\n'
-                                '  "items": [\n'
-                                '    {"descripcion": "BANANO EXTRA", "kilos": 253.25, "precio_kilo": 1600.0, "valor_total": 405200}\n'
-                                '  ],\n'
-                                '  "deducciones": [{"concepto": "ASOFRUCOL DESCUENTO ASOFRUCOL", "valor": 2341}],\n'
-                                '  "total_pagos": 2256418,\n'
-                                '  "total_a_pagar": 2208949\n'
-                                "}\n"
-                                "Los números sin puntos de miles ni símbolos de moneda ($). "
-                                "Si no encuentras un campo, usa null."
-                            ),
-                        },
-                    ],
-                }],
-            )
+            if proveedor == 'gpt':
+                text, _ = _call_openai_vision(prompt_banano, image_data, media_type, max_tokens=1024)
+            else:
+                client = _anthropic.Anthropic()
+                message = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                        {"type": "text", "text": prompt_banano},
+                    ]}],
+                )
+                text = message.content[0].text.strip()
         except _anthropic.BadRequestError as e:
             return Response({'error': str(e)}, status=502)
         except _anthropic.APIError as e:
             return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
+        except Exception as e:
+            return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
 
-        text = message.content[0].text.strip()
         if text.startswith("```"):
             lines = text.splitlines()
             text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])

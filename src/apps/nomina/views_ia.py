@@ -22,6 +22,27 @@ from apps.finanzas.models import Egreso, Cuenta
 logger = logging.getLogger(__name__)
 
 
+def _call_openai_vision(system_prompt: str, user_prompt: str, image_b64: str, media_type: str, max_tokens: int = 8192) -> tuple:
+    """Llama a GPT-4o con visión. Devuelve (texto, tokens_usados)."""
+    import openai
+    api_key = os.getenv('OPENAI_API_KEY', '')
+    client = openai.OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        max_tokens=max_tokens,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_b64}"}},
+                {"type": "text", "text": user_prompt},
+            ]},
+        ],
+    )
+    text = response.choices[0].message.content.strip()
+    tokens = (response.usage.prompt_tokens or 0) + (response.usage.completion_tokens or 0)
+    return text, tokens
+
+
 def _claude_create(client, max_retries=3, **kwargs):
     for attempt in range(1, max_retries + 1):
         try:
@@ -346,15 +367,12 @@ class LeerPlanillaDiariaView(APIView):
         if not imagen:
             return Response({'error': 'Se requiere el campo "imagen".'}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_key = os.getenv('ANTHROPIC_API_KEY', '')
-        if not api_key:
-            return Response({'error': 'ANTHROPIC_API_KEY no configurada.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        proveedor = request.data.get('proveedor_ia', 'claude')
 
         contenido = imagen.read()
         media_type = imagen.content_type or 'image/jpeg'
         SOPORTADOS = ('image/jpeg', 'image/png', 'image/webp', 'image/gif')
         if media_type not in SOPORTADOS:
-            # Intenta convertir HEIC/HEIF a JPEG si pillow-heif está disponible
             if media_type in ('image/heic', 'image/heif'):
                 try:
                     import pillow_heif
@@ -374,48 +392,38 @@ class LeerPlanillaDiariaView(APIView):
                 media_type = 'image/jpeg'
 
         imagen_b64 = base64.standard_b64encode(contenido).decode('utf-8')
+        raw = ''
 
         try:
-            client = anthropic.Anthropic(api_key=api_key)
-            message = _claude_create(
-                client,
-                model='claude-opus-4-7',
-                max_tokens=8192,
-                system=_build_system_prompt_diaria(),
-                messages=[
-                    {
-                        'role': 'user',
-                        'content': [
-                            {
-                                'type': 'image',
-                                'source': {
-                                    'type': 'base64',
-                                    'media_type': media_type,
-                                    'data': imagen_b64,
-                                },
-                            },
-                            {'type': 'text', 'text': USER_PROMPT_DIARIA},
-                        ],
-                    }
-                ],
-            )
-
-            if not message.content:
-                logger.error('Claude devolvió content vacío. stop_reason=%s', message.stop_reason)
-                return Response(
-                    {'error': 'Claude no generó respuesta.', 'detalle': f'stop_reason={message.stop_reason}'},
-                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            if proveedor == 'gpt':
+                raw, tokens_usados = _call_openai_vision(
+                    _build_system_prompt_diaria(), USER_PROMPT_DIARIA,
+                    imagen_b64, media_type, max_tokens=8192,
                 )
+            else:
+                api_key = os.getenv('ANTHROPIC_API_KEY', '')
+                if not api_key:
+                    return Response({'error': 'ANTHROPIC_API_KEY no configurada.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                client = anthropic.Anthropic(api_key=api_key)
+                message = _claude_create(
+                    client,
+                    model='claude-opus-4-7',
+                    max_tokens=8192,
+                    system=_build_system_prompt_diaria(),
+                    messages=[{'role': 'user', 'content': [
+                        {'type': 'image', 'source': {'type': 'base64', 'media_type': media_type, 'data': imagen_b64}},
+                        {'type': 'text', 'text': USER_PROMPT_DIARIA},
+                    ]}],
+                )
+                if not message.content:
+                    return Response({'error': 'El modelo no generó respuesta.'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                raw = message.content[0].text.strip()
+                tokens_usados = message.usage.input_tokens + message.usage.output_tokens
 
-            raw = message.content[0].text.strip()
-            logger.debug('Claude raw response (primeros 500): %s', raw[:500])
+            logger.debug('IA raw response (primeros 500): %s', raw[:500])
 
             if not raw:
-                logger.error('Claude devolvió texto vacío. stop_reason=%s', message.stop_reason)
-                return Response(
-                    {'error': 'Claude devolvió una respuesta vacía.', 'detalle': f'stop_reason={message.stop_reason}'},
-                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                )
+                return Response({'error': 'El modelo devolvió una respuesta vacía.'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[1]
@@ -423,33 +431,29 @@ class LeerPlanillaDiariaView(APIView):
 
             datos = json.loads(raw)
 
-            # Corrige dígitos OCR en abreviaturas de lote y labor (6→G, 0→O, 1→I, 8→B)
             for reg in datos.get('registros', []):
                 reg['lote'] = _corregir_abreviatura(reg.get('lote'))
                 reg['labor'] = _corregir_abreviatura(reg.get('labor'))
 
-            # Soporta formato semanal (fecha_inicio) y diario (fecha)
             fecha = datos.get('fecha_inicio') or datos.get('fecha') or ''
             if not datos.get('semana_ref'):
                 datos['semana_ref'] = semana_ref_desde_fecha(fecha)
-            # Compat: asegurar campo 'fecha' para el frontend
             if not datos.get('fecha') and fecha:
                 datos['fecha'] = fecha
 
-            return Response({
-                'ok': True,
-                'datos': datos,
-                'tokens_usados': message.usage.input_tokens + message.usage.output_tokens,
-            })
+            return Response({'ok': True, 'datos': datos, 'tokens_usados': tokens_usados})
 
         except json.JSONDecodeError as e:
-            logger.error('Claude devolvió JSON inválido: %s', raw[:500])
-            return Response({'error': 'No se pudo parsear la respuesta de Claude.', 'detalle': str(e)},
+            logger.error('IA devolvió JSON inválido: %s', raw[:500])
+            return Response({'error': 'No se pudo parsear la respuesta de la IA.', 'detalle': str(e)},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         except anthropic.APIError as e:
             logger.error('Error API Anthropic: %s', e)
             return Response({'error': 'Error al llamar a la API de Claude.', 'detalle': str(e)},
                             status=status.HTTP_502_BAD_GATEWAY)
+        except Exception as e:
+            logger.error('Error IA: %s', e)
+            return Response({'error': f'Error del servicio de IA: {e}'}, status=status.HTTP_502_BAD_GATEWAY)
 
 
 class LeerPlanillaSemanalExcelView(APIView):
@@ -579,9 +583,7 @@ class LeerPlanillaView(APIView):
         if not imagen:
             return Response({'error': 'Se requiere el campo "imagen".'}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_key = os.getenv('ANTHROPIC_API_KEY', '')
-        if not api_key:
-            return Response({'error': 'ANTHROPIC_API_KEY no configurada.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        proveedor = request.data.get('proveedor_ia', 'claude')
 
         contenido = imagen.read()
         media_type = imagen.content_type or 'image/jpeg'
@@ -606,69 +608,55 @@ class LeerPlanillaView(APIView):
                 media_type = 'image/jpeg'
 
         imagen_b64 = base64.standard_b64encode(contenido).decode('utf-8')
+        raw = ''
 
         try:
-            client = anthropic.Anthropic(api_key=api_key)
-            message = _claude_create(
-                client,
-                model='claude-opus-4-7',
-                max_tokens=4096,
-                system=_build_system_prompt_semanal(),
-                messages=[
-                    {
-                        'role': 'user',
-                        'content': [
-                            {
-                                'type': 'image',
-                                'source': {
-                                    'type': 'base64',
-                                    'media_type': media_type,
-                                    'data': imagen_b64,
-                                },
-                            },
-                            {'type': 'text', 'text': USER_PROMPT},
-                        ],
-                    }
-                ],
-            )
-
-            if not message.content:
-                logger.error('Claude devolvió content vacío. stop_reason=%s', message.stop_reason)
-                return Response(
-                    {'error': 'Claude no generó respuesta.', 'detalle': f'stop_reason={message.stop_reason}'},
-                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            if proveedor == 'gpt':
+                raw, tokens_usados = _call_openai_vision(
+                    _build_system_prompt_semanal(), USER_PROMPT,
+                    imagen_b64, media_type, max_tokens=4096,
                 )
-
-            raw = message.content[0].text.strip()
-            logger.debug('Claude raw response (primeros 500): %s', raw[:500])
+            else:
+                api_key = os.getenv('ANTHROPIC_API_KEY', '')
+                if not api_key:
+                    return Response({'error': 'ANTHROPIC_API_KEY no configurada.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                client = anthropic.Anthropic(api_key=api_key)
+                message = _claude_create(
+                    client,
+                    model='claude-opus-4-7',
+                    max_tokens=4096,
+                    system=_build_system_prompt_semanal(),
+                    messages=[{'role': 'user', 'content': [
+                        {'type': 'image', 'source': {'type': 'base64', 'media_type': media_type, 'data': imagen_b64}},
+                        {'type': 'text', 'text': USER_PROMPT},
+                    ]}],
+                )
+                if not message.content:
+                    return Response({'error': 'El modelo no generó respuesta.'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                raw = message.content[0].text.strip()
+                tokens_usados = message.usage.input_tokens + message.usage.output_tokens
 
             if not raw:
-                logger.error('Claude devolvió texto vacío. stop_reason=%s', message.stop_reason)
-                return Response(
-                    {'error': 'Claude devolvió una respuesta vacía.', 'detalle': f'stop_reason={message.stop_reason}'},
-                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                )
+                return Response({'error': 'El modelo devolvió una respuesta vacía.'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[1]
                 raw = raw.rsplit('```', 1)[0]
 
             datos = json.loads(raw)
-
-            return Response({
-                'ok': True,
-                'datos': datos,
-                'tokens_usados': message.usage.input_tokens + message.usage.output_tokens,
-            })
+            return Response({'ok': True, 'datos': datos, 'tokens_usados': tokens_usados})
 
         except json.JSONDecodeError as e:
-            logger.error('Claude devolvió JSON inválido: %s', raw[:500])
-            return Response({'error': 'No se pudo parsear la respuesta de Claude.', 'detalle': str(e)},
+            logger.error('IA devolvió JSON inválido: %s', raw[:500])
+            return Response({'error': 'No se pudo parsear la respuesta de la IA.', 'detalle': str(e)},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         except anthropic.APIError as e:
             logger.error('Error API Anthropic: %s', e)
             return Response({'error': 'Error al llamar a la API de Claude.', 'detalle': str(e)},
                             status=status.HTTP_502_BAD_GATEWAY)
+        except Exception as e:
+            logger.error('Error IA: %s', e)
+            return Response({'error': f'Error del servicio de IA: {e}'}, status=status.HTTP_502_BAD_GATEWAY)
 
 
 def _buscar_empleado(nombre: str, umbral: float = 0.4):
