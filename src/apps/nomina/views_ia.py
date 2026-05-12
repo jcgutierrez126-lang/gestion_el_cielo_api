@@ -28,7 +28,7 @@ def _call_openai_vision(system_prompt: str, user_prompt: str, image_b64: str, me
     api_key = os.getenv('OPENAI_API_KEY', '')
     client = openai.OpenAI(api_key=api_key)
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1",
         max_tokens=max_tokens,
         messages=[
             {"role": "system", "content": system_prompt},
