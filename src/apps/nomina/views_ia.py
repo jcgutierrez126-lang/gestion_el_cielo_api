@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 def _call_openai_vision(system_prompt: str, user_prompt: str, image_b64: str, media_type: str, max_tokens: int = 8192) -> tuple:
-    """Llama a GPT-4o con visión. Devuelve (texto, tokens_usados)."""
+    """Llama a GPT-4.1 con visión. Devuelve (texto, tokens_usados)."""
     import openai
     api_key = os.getenv('OPENAI_API_KEY', '')
-    client = openai.OpenAI(api_key=api_key)
+    client = openai.OpenAI(api_key=api_key, timeout=180.0)
     response = client.chat.completions.create(
         model="gpt-4.1",
         max_tokens=max_tokens,
