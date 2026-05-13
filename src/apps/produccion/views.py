@@ -29,7 +29,7 @@ def _call_openai_vision(prompt: str, image_b64: str, media_type: str, max_tokens
     api_key = os.getenv('OPENAI_API_KEY', '')
     client = openai.OpenAI(api_key=api_key, timeout=120.0)
     response = client.chat.completions.create(
-        model="gpt-4.1",
+        model="o4-mini",
         max_tokens=max_tokens,
         messages=[{
             "role": "user",
