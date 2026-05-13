@@ -188,7 +188,7 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
 
         try:
             if proveedor == 'gpt':
-                text, _ = _call_openai_vision(prompt_cafe, image_data, media_type, max_tokens=1024)
+                text, _ = _call_openai_vision(prompt_cafe, image_data, media_type, max_tokens=4096)
             else:
                 client = _anthropic.Anthropic()
                 message = client.messages.create(
@@ -207,11 +207,16 @@ class VentaCafeViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
 
-        if text.startswith("```"):
-            lines = text.splitlines()
-            text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
+        try:
+            if not text:
+                return Response({'error': 'El modelo no devolvió contenido'}, status=502)
+            if text.startswith("```"):
+                lines = text.splitlines()
+                text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return Response({'error': f'Respuesta del modelo no es JSON válido: {text[:300]}'}, status=502)
 
-        data = json.loads(text)
         return Response(data)
 
     @action(detail=False, methods=['post'])
@@ -349,7 +354,7 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
 
         try:
             if proveedor == 'gpt':
-                text, _ = _call_openai_vision(prompt_banano, image_data, media_type, max_tokens=1024)
+                text, _ = _call_openai_vision(prompt_banano, image_data, media_type, max_tokens=4096)
             else:
                 client = _anthropic.Anthropic()
                 message = client.messages.create(
@@ -368,11 +373,16 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'Error del servicio de IA: {e}'}, status=502)
 
-        if text.startswith("```"):
-            lines = text.splitlines()
-            text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
+        try:
+            if not text:
+                return Response({'error': 'El modelo no devolvió contenido'}, status=502)
+            if text.startswith("```"):
+                lines = text.splitlines()
+                text = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return Response({'error': f'Respuesta del modelo no es JSON válido: {text[:300]}'}, status=502)
 
-        data = json.loads(text)
         return Response(data)
 
     @action(detail=False, methods=['post'])
