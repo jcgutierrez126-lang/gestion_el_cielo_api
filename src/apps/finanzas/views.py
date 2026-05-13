@@ -255,8 +255,13 @@ class ResumenView(APIView):
 
         # ── Global aggregates ─────────────────────────────────────────────────
         from apps.nomina.models import ControlSemanal
+        from django.db.models import Q
         egresos_agg  = Egreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
         ingresos_agg = Ingreso.objects.aggregate(total=Sum('valor'), count=Count('id'))
+        # Ingresos manuales: los que no vienen de signals (origen null o vacío)
+        ingresos_manuales_agg = Ingreso.objects.filter(
+            Q(origen__isnull=True) | Q(origen='')
+        ).aggregate(total=Sum('valor'), count=Count('id'))
         nomina_agg   = ControlSemanal.objects.aggregate(total=Sum('valor'), count=Count('id'))
         cafe_agg = VentaCafe.objects.aggregate(
             total_kilos=Sum('kilos'), total_valor=Sum('valor_neto'), count=Count('id')
@@ -273,8 +278,13 @@ class ResumenView(APIView):
         )
 
         # ── KPIs financieros ──────────────────────────────────────────────────
-        # Egresos es la fuente única de verdad (nómina y ventas ya están en egresos/ingresos vía signals)
-        total_ingresos = D(str(ingresos_agg['total'] or 0))
+        # total_ingresos = ventas reales + ingresos manuales (evita doble conteo
+        # cuando los signals crean Ingreso Y también existen entradas manuales para las mismas ventas)
+        total_ingresos = (
+            D(str(cafe_agg['total_valor'] or 0))
+            + D(str(banano_agg['total_valor'] or 0))
+            + D(str(ingresos_manuales_agg['total'] or 0))
+        )
         total_costos = D(str(egresos_agg['total'] or 0))
         utilidad = total_ingresos - total_costos
         roi = round((utilidad / total_costos * 100), 2) if total_costos > 0 else D('0')
