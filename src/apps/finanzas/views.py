@@ -262,6 +262,13 @@ class ResumenView(APIView):
         ingresos_manuales_agg = Ingreso.objects.filter(
             Q(origen__isnull=True) | Q(origen='')
         ).aggregate(total=Sum('valor'), count=Count('id'))
+        # Ingresos via signal de café y banano
+        ingresos_cafe_agg = Ingreso.objects.filter(
+            origen__startswith='venta_cafe:'
+        ).aggregate(total=Sum('valor'), count=Count('id'))
+        ingresos_banano_agg = Ingreso.objects.filter(
+            origen__startswith='venta_banano:'
+        ).aggregate(total=Sum('valor'), count=Count('id'))
         nomina_agg   = ControlSemanal.objects.aggregate(total=Sum('valor'), count=Count('id'))
         cafe_agg = VentaCafe.objects.aggregate(
             total_kilos=Sum('kilos'), total_valor=Sum('valor_neto'), count=Count('id')
@@ -295,6 +302,11 @@ class ResumenView(APIView):
             'ingresos': {
                 'total': str(ingresos_agg['total'] or 0),
                 'count': ingresos_agg['count'],
+                'desglose': {
+                    'cafe':    {'total': str(ingresos_cafe_agg['total'] or 0),   'count': ingresos_cafe_agg['count']},
+                    'banano':  {'total': str(ingresos_banano_agg['total'] or 0), 'count': ingresos_banano_agg['count']},
+                    'manuales':{'total': str(ingresos_manuales_agg['total'] or 0),'count': ingresos_manuales_agg['count']},
+                },
             },
             'nomina': {
                 'total': str(nomina_agg['total'] or 0),
