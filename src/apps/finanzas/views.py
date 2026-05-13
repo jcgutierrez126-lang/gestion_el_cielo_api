@@ -278,12 +278,11 @@ class ResumenView(APIView):
         )
 
         # ── KPIs financieros ──────────────────────────────────────────────────
-        # total_ingresos = ventas reales + ingresos manuales (evita doble conteo
-        # cuando los signals crean Ingreso Y también existen entradas manuales para las mismas ventas)
+        # Fuente única: tablas de ventas reales. No se usan los Ingreso del libro
+        # para evitar doble conteo con entradas manuales previas a los signals.
         total_ingresos = (
             D(str(cafe_agg['total_valor'] or 0))
             + D(str(banano_agg['total_valor'] or 0))
-            + D(str(ingresos_manuales_agg['total'] or 0))
         )
         total_costos = D(str(egresos_agg['total'] or 0))
         utilidad = total_ingresos - total_costos
