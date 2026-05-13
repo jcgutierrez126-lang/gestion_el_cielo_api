@@ -278,12 +278,8 @@ class ResumenView(APIView):
         )
 
         # ── KPIs financieros ──────────────────────────────────────────────────
-        # Fuente única: tablas de ventas reales. No se usan los Ingreso del libro
-        # para evitar doble conteo con entradas manuales previas a los signals.
-        total_ingresos = (
-            D(str(cafe_agg['total_valor'] or 0))
-            + D(str(banano_agg['total_valor'] or 0))
-        )
+        # La tabla Ingreso es la fuente única de verdad (ventas llegan via signals)
+        total_ingresos = D(str(ingresos_agg['total'] or 0))
         total_costos = D(str(egresos_agg['total'] or 0))
         utilidad = total_ingresos - total_costos
         roi = round((utilidad / total_costos * 100), 2) if total_costos > 0 else D('0')
