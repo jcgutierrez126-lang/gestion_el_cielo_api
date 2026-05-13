@@ -256,6 +256,23 @@ class VentaBananoViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('-fecha')
 
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        agg = qs.aggregate(total_valor=Sum('valor_total'), total_kilos=Sum('kilos'))
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            response.data['total_valor'] = float(agg['total_valor'] or 0)
+            response.data['total_kilos'] = float(agg['total_kilos'] or 0)
+            return response
+        serializer = self.get_serializer(qs, many=True)
+        return Response({
+            'results': serializer.data,
+            'total_valor': float(agg['total_valor'] or 0),
+            'total_kilos': float(agg['total_kilos'] or 0),
+        })
+
     @action(detail=False, methods=['get'])
     def por_periodo(self, request):
         grupo = request.query_params.get('grupo', 'mes')
