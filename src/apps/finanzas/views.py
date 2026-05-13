@@ -273,12 +273,9 @@ class ResumenView(APIView):
         )
 
         # ── KPIs financieros ──────────────────────────────────────────────────
-        # Ingresos es la fuente única de verdad (incluye ventas vía signals)
+        # Egresos es la fuente única de verdad (nómina y ventas ya están en egresos/ingresos vía signals)
         total_ingresos = D(str(ingresos_agg['total'] or 0))
-        total_costos = (
-            D(str(egresos_agg['total'] or 0))
-            + D(str(nomina_agg['total'] or 0))
-        )
+        total_costos = D(str(egresos_agg['total'] or 0))
         utilidad = total_ingresos - total_costos
         roi = round((utilidad / total_costos * 100), 2) if total_costos > 0 else D('0')
         cobertura = round((total_ingresos / total_costos * 100), 2) if total_costos > 0 else D('0')
