@@ -29,7 +29,7 @@ def _call_openai_vision(system_prompt: str, user_prompt: str, image_b64: str, me
     client = openai.OpenAI(api_key=api_key, timeout=180.0)
     response = client.chat.completions.create(
         model="o4-mini",
-        max_tokens=max_tokens,
+        max_completion_tokens=max_tokens,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": [

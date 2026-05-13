@@ -30,7 +30,7 @@ def _call_openai_vision(prompt: str, image_b64: str, media_type: str, max_tokens
     client = openai.OpenAI(api_key=api_key, timeout=120.0)
     response = client.chat.completions.create(
         model="o4-mini",
-        max_tokens=max_tokens,
+        max_completion_tokens=max_tokens,
         messages=[{
             "role": "user",
             "content": [
