@@ -179,6 +179,14 @@ REGLAS ESTRICTAS:
 - Valores numéricos sin separador de miles (ejemplo: 71667 no 71.667, 94000 no 94.000).
 - El campo "dia" debe ser exactamente: Lunes, Martes, Miércoles, Jueves, Viernes o Sábado.
 
+CANTIDADES (Col 4, 7, 10, 13, 16, 19 — Cant. de cada día):
+- Son siempre dígitos. Lee con extremo cuidado "1" vs "7":
+  - "1" = trazo vertical simple o con base → es UNO.
+  - "7" = trazo con ángulo oblicuo en la parte superior → es SIETE.
+  - Un trazo casi vertical con solo una pequeña inclinación es 1, NO 7.
+  - En esta planilla, los trabajadores NO suelen anotar cantidades de 7 unidades cuando hacen una sola labor; 1 es mucho más frecuente que 7.
+  - Si dudas entre 1 y 7, prefiere 1.
+
 LOTES — copia la ABREVIATURA EXACTA como está escrita. NO conviertas a nombre completo. Si en blanco → null.
 Abreviaturas del modelo: {lotes_txt}
 Ejemplos reales: "GD", "LL", "B", "F", "BLB", "LLB", "SF", "Sh", "Nn", "ML", "BL", "Es", "SJ", "G"
