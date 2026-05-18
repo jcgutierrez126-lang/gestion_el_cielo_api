@@ -114,6 +114,8 @@ class ControlSemanalViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['delete'], url_path='borrar-semana')
     def borrar_semana(self, request):
+        if not getattr(request.user, 'is_admin', False):
+            return Response({'error': 'Solo administradores pueden borrar semanas completas.'}, status=status.HTTP_403_FORBIDDEN)
         semana_ref = request.query_params.get('semana_ref', '').strip()
         if not semana_ref:
             return Response({'error': 'semana_ref requerido'}, status=status.HTTP_400_BAD_REQUEST)
